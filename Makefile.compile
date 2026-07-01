@@ -1,0 +1,35 @@
+include $(UNIFIED_WORKLOAD_HOME)/Makefile.app
+
+ifeq ($(CROSS_COMPILE),)
+$(error CROSS_COMPILE is not defined)
+endif
+
+AS = $(CROSS_COMPILE)gcc
+CC = $(CROSS_COMPILE)gcc
+CXX = $(CROSS_COMPILE)g++
+LD = $(CROSS_COMPILE)gcc
+
+INCLUDES = $(addprefix -I, $(INC_DIR))
+
+CFLAGS += -O2 -MMD $(INCLUDES)
+CXXFLAGS += -O2 -MMD $(INCLUDES)
+
+OBJS = $(addprefix $(DST_DIR)/, $(addsuffix .o, $(basename $(SRCS))))
+
+$(DST_DIR)/%.o: %.cpp
+	@echo + CXX $<
+	@mkdir -p $(dir $@)
+	@$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+$(DST_DIR)/%.o: %.c
+	@echo + CC $<
+	@mkdir -p $(dir $@)
+	@$(CC) $(CFLAGS) -c -o $@ $<
+
+$(APP): $(OBJS)
+	@echo + LD $@
+	@mkdir -p $(dir $@)
+	@$(LD) $(LDFLAGS) -o $(APP) $(OBJS)
+
+DEPS = $(addprefix $(DST_DIR)/, $(addsuffix .d, $(basename $(SRCS))))
+-include $(DEPS)

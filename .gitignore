@@ -1,0 +1,16 @@
+# Build outputs
+/build/
+
+# Downloaded or symlinked external source trees
+/external/
+/cache/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Editor and OS local files
+.DS_Store
+*.swp
+*.swo

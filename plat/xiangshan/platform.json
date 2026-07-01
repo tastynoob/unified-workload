@@ -1,0 +1,26 @@
+{
+  "arch": "riscv",
+  "firmware": "opensbi",
+  "linux_defconfig": "configs/linux_defconfig",
+  "dts_generator": "dts/DTSGen.py",
+  "opensbi": {
+    "platform": "generic"
+  },
+  "defaults": {
+    "harts": 1,
+    "bootargs": "console=hvc0 earlycon=sbi",
+    "memory_base": "0x80000000",
+    "memory_size": "0x200000000",
+    "serial_addr": "0x40600000",
+    "sd_addr": "0x40002000",
+    "timebase_frequency": 10000000,
+    "mmu_type": "riscv,sv48",
+    "rva_profile": "rva23s64"
+  },
+  "profiles": {
+    "hello": {
+      "workload": "hello",
+      "harts": 1
+    }
+  }
+}
