@@ -1,0 +1,21 @@
+{
+  "resources": {
+    "linux": {
+      "type": "archive",
+      "url": "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.10.3.tar.xz",
+      "archive_name": "linux-6.10.3.tar.xz",
+      "dest": "linux",
+      "strip_components": 1
+    },
+    "tfa": {
+      "type": "git",
+      "url": "https://git.trustedfirmware.org/TF-A/trusted-firmware-a.git",
+      "dest": "trusted-firmware-a"
+    },
+    "u-boot": {
+      "type": "git",
+      "url": "https://source.denx.de/u-boot/u-boot.git",
+      "dest": "u-boot"
+    }
+  }
+}

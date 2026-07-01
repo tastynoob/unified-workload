@@ -11,9 +11,9 @@ def build(ctx: BuildContext) -> Path:
     opensbi = ensure_resource(ctx, "opensbi")
     image = ctx.linux_image()
     dtb = ctx.dtb_path()
-    if not image.exists():
+    if not image.exists() and not ctx.args.dry_run:
         raise BuildError(f"Linux Image is missing: {image}. Run build-kernel first.")
-    if not dtb.exists():
+    if not dtb.exists() and not ctx.args.dry_run:
         raise BuildError(f"DTB is missing: {dtb}. Run build-dtb first.")
 
     build_dir = ctx.profile_build_dir() / "opensbi"

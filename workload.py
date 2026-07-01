@@ -32,6 +32,7 @@ CROSS_COMPILE_REQUIRED_COMMANDS = {
     "build-kernel",
     "build-firmware",
     "build-opensbi",
+    "build-tfa",
     "all",
 }
 
@@ -49,6 +50,7 @@ def make_parser() -> argparse.ArgumentParser:
             "build-kernel",
             "build-firmware",
             "build-opensbi",
+            "build-tfa",
             "all",
         ],
     )
@@ -62,7 +64,7 @@ def make_parser() -> argparse.ArgumentParser:
     parser.add_argument("--build-dir", type=Path, default=SCRIPT_DIR / "build")
     parser.add_argument(
         "--cross-compile",
-        help="cross compiler prefix, for example /path/to/riscv64-buildroot-linux-gnu-",
+        help="cross compiler prefix, for example /path/to/<target-triplet>-",
     )
     parser.add_argument("--jobs", type=int)
     parser.add_argument("--workload", help="workload name under unified-workload/apps")
@@ -138,7 +140,11 @@ def make_context(args: argparse.Namespace) -> BuildContext:
 
 
 def command_doctor(ctx: BuildContext) -> None:
-    tools = ["git", "make", "tar", "bash", "dtc", cross_gcc(ctx.args.cross_compile)]
+    tools = ["git", "make", "tar", "bash", cross_gcc(ctx.args.cross_compile)]
+    doctor_tools = getattr(ctx.platform_workflow, "doctor_tools", None)
+    if doctor_tools is not None:
+        tools.extend(doctor_tools(ctx))
+
     missing: list[str] = []
     for tool in tools:
         found = shutil.which(tool)
@@ -175,6 +181,7 @@ def command_fetch(ctx: BuildContext) -> None:
 
 def command_print_plan(ctx: BuildContext) -> None:
     log(f"arch: {ctx.arch}")
+    log(f"linux arch: {ctx.linux_arch}")
     log(f"platform: {ctx.platform}")
     log(f"resource config: {ctx.args.config}")
     log(f"platform config: {ctx.platform_config_path()}")
@@ -185,13 +192,17 @@ def command_print_plan(ctx: BuildContext) -> None:
     log(f"app source: {ctx.app_dir()}")
     log(f"workload binary: {ctx.workload_binary()}")
     log(f"initramfs list: {ctx.initramfs_list()}")
-    log(f"dts generator: {ctx.dts_generator_path()}")
-    log(f"dtb: {ctx.dtb_path()}")
+    if ctx.args.dts_generator or ctx.platform_config.get("dts_generator"):
+        log(f"dts generator: {ctx.dts_generator_path()}")
+        log(f"dtb: {ctx.dtb_path()}")
+    else:
+        log("dtb: platform workflow does not use a static DTB")
     log(f"harts: {ctx.harts()}")
-    log(f"linux: {resource_path(ctx, 'linux')}")
+    for name in sorted(ctx.resource_config["resources"]):
+        log(f"resource {name}: {resource_path(ctx, name)}")
     log(f"linux defconfig: {ctx.linux_defconfig()}")
-    log(f"opensbi: {resource_path(ctx, 'opensbi')}")
-    log(f"opensbi platform: {ctx.opensbi_platform}")
+    if "opensbi" in ctx.resource_config["resources"]:
+        log(f"opensbi platform: {ctx.opensbi_platform}")
     log(f"build dir: {ctx.profile_build_dir()}")
     log(f"final payload: {ctx.platform_workflow.final_payload(ctx)}")
 
@@ -222,7 +233,7 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
             ctx.platform_workflow.build_dtb(ctx)
         elif args.command == "build-kernel":
             ctx.platform_workflow.build_kernel(ctx)
-        elif args.command in ("build-firmware", "build-opensbi"):
+        elif args.command in ("build-firmware", "build-opensbi", "build-tfa"):
             ctx.platform_workflow.build_firmware(ctx)
         elif args.command == "all":
             command_all(ctx)

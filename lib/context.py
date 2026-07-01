@@ -50,6 +50,10 @@ class BuildContext:
         return str(self.platform_config.get("firmware", ""))
 
     @property
+    def linux_arch(self) -> str:
+        return str(self.platform_config.get("linux_arch", self.arch))
+
+    @property
     def opensbi_platform(self) -> str:
         if self.args.opensbi_platform:
             return self.args.opensbi_platform
@@ -64,7 +68,7 @@ class BuildContext:
 
     def build_env(self) -> dict[str, str]:
         env = os.environ.copy()
-        env["ARCH"] = self.arch
+        env["ARCH"] = self.linux_arch
         if self.args.cross_compile:
             env["CROSS_COMPILE"] = self.args.cross_compile
         else:
@@ -100,8 +104,11 @@ class BuildContext:
     def initramfs_list(self) -> Path:
         return self.profile_build_dir() / "initramfs.txt"
 
+    def initramfs_cpio(self) -> Path:
+        return self.profile_build_dir() / "initramfs.cpio"
+
     def linux_image(self) -> Path:
-        return self.profile_build_dir() / "linux" / "arch" / self.arch / "boot" / "Image"
+        return self.profile_build_dir() / "linux" / "arch" / self.linux_arch / "boot" / "Image"
 
     def dtb_path(self) -> Path:
         return self.profile_build_dir() / "dtb" / f"{self.platform}.dtb"

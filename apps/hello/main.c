@@ -2,7 +2,7 @@
 
 int main(void)
 {
-    puts("Hello, RISC-V World!");
+    puts("hello");
     puts("hanging");
     while (1) {
     }

@@ -24,6 +24,10 @@ def doctor(ctx: BuildContext) -> list[Path]:
     return [path for path in required if not path.exists()]
 
 
+def doctor_tools(ctx: BuildContext) -> list[str]:
+    return ["dtc"]
+
+
 def generate_dts(ctx: BuildContext) -> str:
     dtsgen_cls = _dtsgen_class(ctx)
     isa_extensions = set(ctx.args.isa_extension)

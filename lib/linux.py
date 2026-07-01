@@ -34,21 +34,25 @@ def set_linux_config(config_path: Path, key: str, value: str) -> None:
 def build_kernel(ctx: BuildContext, defconfig: Path) -> Path:
     linux = ensure_resource(ctx, "linux")
     initramfs = ctx.initramfs_list()
-    if not initramfs.exists():
+    if not initramfs.exists() and not ctx.args.dry_run:
         raise BuildError(f"initramfs list is missing: {initramfs}. Run build-workload first.")
 
     defconfig = defconfig.resolve()
     if not defconfig.exists():
         raise BuildError(f"Linux defconfig does not exist: {defconfig}")
 
-    defconfig_name = f"unified_{ctx.platform}_defconfig"
-    defconfig_dst = linux / "arch" / ctx.arch / "configs" / defconfig_name
-    log(f"install Linux defconfig {defconfig} -> {defconfig_dst}")
-    if not ctx.args.dry_run:
-        defconfig_dst.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(defconfig, defconfig_dst)
-
     build_dir = ctx.profile_build_dir() / "linux"
+    linux_config = build_dir / ".config"
+    log(f"install Linux config {defconfig} -> {linux_config}")
+    if not ctx.args.dry_run:
+        build_dir.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(defconfig, linux_config)
+
+    if ctx.args.dry_run:
+        log(f"set CONFIG_INITRAMFS_SOURCE={initramfs}")
+    else:
+        set_linux_config(linux_config, "CONFIG_INITRAMFS_SOURCE", str(initramfs.resolve()))
+
     env = ctx.build_env()
     run(
         [
@@ -56,27 +60,7 @@ def build_kernel(ctx: BuildContext, defconfig: Path) -> Path:
             "-C",
             str(linux),
             f"O={build_dir}",
-            f"ARCH={ctx.arch}",
-            f"CROSS_COMPILE={ctx.args.cross_compile}",
-            defconfig_name,
-        ],
-        env=env,
-        dry_run=ctx.args.dry_run,
-    )
-
-    linux_config = build_dir / ".config"
-    if ctx.args.dry_run:
-        log(f"set CONFIG_INITRAMFS_SOURCE={initramfs}")
-    else:
-        set_linux_config(linux_config, "CONFIG_INITRAMFS_SOURCE", str(initramfs.resolve()))
-
-    run(
-        [
-            "make",
-            "-C",
-            str(linux),
-            f"O={build_dir}",
-            f"ARCH={ctx.arch}",
+            f"ARCH={ctx.linux_arch}",
             f"CROSS_COMPILE={ctx.args.cross_compile}",
             "olddefconfig",
         ],
@@ -89,7 +73,7 @@ def build_kernel(ctx: BuildContext, defconfig: Path) -> Path:
             "-C",
             str(linux),
             f"O={build_dir}",
-            f"ARCH={ctx.arch}",
+            f"ARCH={ctx.linux_arch}",
             f"CROSS_COMPILE={ctx.args.cross_compile}",
             "-j",
             str(ctx.args.jobs),
@@ -101,4 +85,11 @@ def build_kernel(ctx: BuildContext, defconfig: Path) -> Path:
     image = ctx.linux_image()
     if not ctx.args.dry_run and not image.exists():
         raise BuildError(f"Expected Linux Image does not exist: {image}")
+    generated_initramfs = build_dir / "usr" / "initramfs_data.cpio"
+    initramfs_cpio = ctx.initramfs_cpio()
+    log(f"install initramfs cpio {generated_initramfs} -> {initramfs_cpio}")
+    if not ctx.args.dry_run:
+        if not generated_initramfs.exists():
+            raise BuildError(f"Expected initramfs cpio does not exist: {generated_initramfs}")
+        shutil.copy2(generated_initramfs, initramfs_cpio)
     return image

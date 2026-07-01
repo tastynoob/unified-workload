@@ -1,0 +1,32 @@
+{
+  "arch": "aarch64",
+  "linux_arch": "arm64",
+  "firmware": "tfa",
+  "linux_defconfig": "configs/linux_defconfig",
+  "dtb": {
+    "mode": "qemu-runtime"
+  },
+  "tfa": {
+    "platform": "qemu",
+    "debug": false,
+    "fip_offset": "0x40000",
+    "flash_size": "0x4000000"
+  },
+  "u_boot": {
+    "defconfig": "qemu_arm64_defconfig",
+    "disable_efi_capsule_tool": true
+  },
+  "defaults": {
+    "harts": 1,
+    "bootargs": "console=ttyAMA0 earlycon",
+    "qemu_machine": "virt,secure=on",
+    "qemu_cpu": "cortex-a57",
+    "qemu_memory": "1024M"
+  },
+  "profiles": {
+    "hello": {
+      "workload": "hello",
+      "harts": 1
+    }
+  }
+}
