@@ -9,9 +9,11 @@ from lib.linux import build_kernel as build_linux_kernel
 from lib.common import run
 
 
-def _to_int(value: str | None) -> int | None:
+def _to_int(value: str | int | None) -> int | None:
     if value is None:
         return None
+    if isinstance(value, int):
+        return value
     return int(value, 0)
 
 
@@ -26,6 +28,20 @@ def doctor(ctx: BuildContext) -> list[Path]:
 
 def doctor_tools(ctx: BuildContext) -> list[str]:
     return ["dtc"]
+
+
+def _reserved_memories(ctx: BuildContext) -> list[dict]:
+    result = []
+    for idx, entry in enumerate(ctx.platform_config.get("reserved_memories", [])):
+        result.append(
+            {
+                "start": _to_int(entry["start"]),
+                "size": _to_int(entry["size"]),
+                "name": entry.get("name") or f"resv{idx}",
+                "no_map": bool(entry.get("no_map", True)),
+            }
+        )
+    return result
 
 
 def generate_dts(ctx: BuildContext) -> str:
@@ -46,6 +62,7 @@ def generate_dts(ctx: BuildContext) -> str:
         mmu_type=ctx.mmu_type(),
         timebase_freq=ctx.timebase_frequency(),
         memories=[(_to_int(ctx.memory_base()), _to_int(ctx.memory_size()))],
+        reserved_memories=_reserved_memories(ctx),
         uartlite_addr=_to_int(ctx.serial_addr()),
     )
     return dtsgen.gen_dts() + "\n"

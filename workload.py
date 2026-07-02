@@ -21,6 +21,7 @@ from lib.context import (
 )
 from lib.resources import (
     fetch_resource,
+    resource_names,
     resource_path,
 )
 from lib.toolchain import cross_gcc
@@ -33,6 +34,7 @@ CROSS_COMPILE_REQUIRED_COMMANDS = {
     "build-firmware",
     "build-opensbi",
     "build-tfa",
+    "build-gcpt",
     "all",
 }
 
@@ -51,6 +53,7 @@ def make_parser() -> argparse.ArgumentParser:
             "build-firmware",
             "build-opensbi",
             "build-tfa",
+            "build-gcpt",
             "all",
         ],
     )
@@ -127,6 +130,9 @@ def make_context(args: argparse.Namespace) -> BuildContext:
         raise BuildError(f"Invalid resource config: {args.config}")
 
     platform_config = load_json(platform_cfg_path)
+    platform_resources = platform_config.get("resources", {})
+    if platform_resources and not isinstance(platform_resources, dict):
+        raise BuildError(f"Invalid platform resources config: {platform_cfg_path}")
     platform_arch = platform_config.get("arch")
     if platform_arch and platform_arch != args.arch:
         raise BuildError(f"Platform {args.platform} requires arch '{platform_arch}', got '{args.arch}'")
@@ -153,7 +159,7 @@ def command_doctor(ctx: BuildContext) -> None:
         if not found:
             missing.append(tool)
 
-    for name in sorted(ctx.resource_config["resources"]):
+    for name in resource_names(ctx):
         path = resource_path(ctx, name)
         resource_status = str(path) if path.exists() else "missing"
         log(f"resource {name}: {resource_status}")
@@ -174,7 +180,7 @@ def command_doctor(ctx: BuildContext) -> None:
 
 
 def command_fetch(ctx: BuildContext) -> None:
-    names = ctx.args.resources or sorted(ctx.resource_config["resources"])
+    names = ctx.args.resources or resource_names(ctx)
     for name in names:
         fetch_resource(ctx, name)
 
@@ -198,10 +204,10 @@ def command_print_plan(ctx: BuildContext) -> None:
     else:
         log("dtb: platform workflow does not use a static DTB")
     log(f"harts: {ctx.harts()}")
-    for name in sorted(ctx.resource_config["resources"]):
+    for name in resource_names(ctx):
         log(f"resource {name}: {resource_path(ctx, name)}")
     log(f"linux defconfig: {ctx.linux_defconfig()}")
-    if "opensbi" in ctx.resource_config["resources"]:
+    if "opensbi" in resource_names(ctx):
         log(f"opensbi platform: {ctx.opensbi_platform}")
     log(f"build dir: {ctx.profile_build_dir()}")
     log(f"final payload: {ctx.platform_workflow.final_payload(ctx)}")
@@ -233,7 +239,7 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
             ctx.platform_workflow.build_dtb(ctx)
         elif args.command == "build-kernel":
             ctx.platform_workflow.build_kernel(ctx)
-        elif args.command in ("build-firmware", "build-opensbi", "build-tfa"):
+        elif args.command in ("build-firmware", "build-opensbi", "build-tfa", "build-gcpt"):
             ctx.platform_workflow.build_firmware(ctx)
         elif args.command == "all":
             command_all(ctx)

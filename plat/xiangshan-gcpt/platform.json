@@ -1,0 +1,49 @@
+{
+  "arch": "riscv",
+  "firmware": "gcpt",
+  "linux_defconfig": "../xiangshan/configs/linux_defconfig",
+  "dts_generator": "../xiangshan/dts/DTSGen.py",
+  "resources": {
+    "libcheckpoint": {
+      "type": "git",
+      "url": "https://github.com/OpenXiangShan/LibCheckpoint.git",
+      "dest": "libcheckpoint",
+      "submodules": true
+    }
+  },
+  "opensbi": {
+    "platform": "generic",
+    "fw_payload_offset": "0x100000"
+  },
+  "gcpt": {
+    "link_address": "0x80000000",
+    "payload_position": "0x80100000",
+    "cflags": [],
+    "ldflags": []
+  },
+  "reserved_memories": [
+    {
+      "name": "gcpt",
+      "start": "0x80000000",
+      "size": "0x100000",
+      "no_map": true
+    }
+  ],
+  "defaults": {
+    "harts": 1,
+    "bootargs": "console=hvc0 earlycon=sbi",
+    "memory_base": "0x80000000",
+    "memory_size": "0x200000000",
+    "serial_addr": "0x40600000",
+    "sd_addr": "0x40002000",
+    "timebase_frequency": 10000000,
+    "mmu_type": "riscv,sv48",
+    "rva_profile": "rva23s64"
+  },
+  "profiles": {
+    "hello": {
+      "workload": "hello",
+      "harts": 1
+    }
+  }
+}

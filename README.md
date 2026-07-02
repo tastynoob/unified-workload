@@ -9,6 +9,7 @@
 | Platform | Arch | Firmware flow | Platform doc |
 | --- | --- | --- | --- |
 | `xiangshan` | `riscv` | OpenSBI payload | [`plat/xiangshan/README.md`](plat/xiangshan/README.md) |
+| `xiangshan-gcpt` | `riscv` | gcpt -> OpenSBI payload | [`plat/xiangshan-gcpt/README.md`](plat/xiangshan-gcpt/README.md) |
 | `qemu-virt-aarch64` | `aarch64` | TF-A -> U-Boot | [`plat/qemu-virt-aarch64/README.md`](plat/qemu-virt-aarch64/README.md) |
 
 后续新增平台时，主 README 只记录公共约定；具体平台的资源、构建命令、产物路径和运行方式放在 `plat/<platform>/README.md`。
@@ -22,7 +23,7 @@
 - `external/`：下载或软链接的外部源码树，git 忽略。
 - `cache/`：下载缓存，git 忽略。
 
-外部大源码树不会提交进仓库。资源通过 `arch/<arch>/resources.json` 声明，默认放在 `external/<arch>/` 下；如果目标目录已经存在，下载步骤会跳过。用户可以手动创建软链接来复用已有源码。
+架构通用资源通过 `arch/<arch>/resources.json` 声明，平台额外资源可以放在 `plat/<platform>/platform.json` 的 `resources` 字段中。资源默认放在 `external/<arch>/` 下；如果目标目录已经存在，下载步骤会跳过。用户可以手动创建软链接来复用已有源码。
 
 ## 目录结构
 
@@ -171,6 +172,8 @@ arch/<arch>/resources.json
 ```text
 plat/<platform>/platform.json
 ```
+
+平台若有额外外部资源，也放在 `platform.json` 的 `resources` 字段中。`fetch` 会合并架构资源和平台资源。
 
 常用字段：
 

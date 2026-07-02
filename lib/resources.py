@@ -3,7 +3,7 @@ from __future__ import annotations
 import shutil
 import urllib.request
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 from lib.common import BuildError, log, run
 from lib.context import BuildContext
@@ -20,8 +20,18 @@ def resource_exists(path: Path) -> bool:
     return path.is_dir() or path.is_symlink()
 
 
-def resource_meta(config: Mapping[str, Any], name: str) -> dict[str, Any]:
-    resources = config["resources"]
+def resource_table(ctx: BuildContext) -> dict[str, Any]:
+    resources = dict(ctx.resource_config["resources"])
+    resources.update(dict(ctx.platform_config.get("resources", {})))
+    return resources
+
+
+def resource_names(ctx: BuildContext) -> list[str]:
+    return sorted(resource_table(ctx))
+
+
+def resource_meta(ctx: BuildContext, name: str) -> dict[str, Any]:
+    resources = resource_table(ctx)
     if name not in resources:
         names = ", ".join(sorted(resources))
         raise BuildError(f"Unknown resource '{name}'. Available resources: {names}")
@@ -29,7 +39,7 @@ def resource_meta(config: Mapping[str, Any], name: str) -> dict[str, Any]:
 
 
 def resource_path(ctx: BuildContext, name: str) -> Path:
-    meta = resource_meta(ctx.resource_config, name)
+    meta = resource_meta(ctx, name)
     return ctx.args.external_dir / ctx.arch / meta.get("dest", name)
 
 
@@ -58,7 +68,7 @@ def download(url: str, dest: Path, dry_run: bool) -> None:
 
 
 def fetch_resource(ctx: BuildContext, name: str) -> None:
-    meta = resource_meta(ctx.resource_config, name)
+    meta = resource_meta(ctx, name)
     dest = resource_path(ctx, name)
     if resource_exists(dest):
         log(f"resource '{name}' already exists: {dest}")
@@ -77,6 +87,11 @@ def fetch_resource(ctx: BuildContext, name: str) -> None:
             remove_path(tmp_dest)
             dest.parent.mkdir(parents=True, exist_ok=True)
         run(cmd, dry_run=ctx.args.dry_run)
+        if meta.get("submodules"):
+            run(
+                ["git", "-C", str(tmp_dest), "submodule", "update", "--init", "--recursive"],
+                dry_run=ctx.args.dry_run,
+            )
         if not ctx.args.dry_run:
             tmp_dest.rename(dest)
         return

@@ -2,6 +2,8 @@
 
 `xiangshan` 平台用于生成面向 XiangShan/RISC-V 的最小 Linux workload 镜像。
 
+checkpoint/SimPoint 场景使用独立的 `xiangshan-gcpt` 平台，见 `plat/xiangshan-gcpt/README.md`。
+
 ## 平台属性
 
 - 架构：`riscv`
