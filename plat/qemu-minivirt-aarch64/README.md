@@ -9,7 +9,7 @@
 - Linux `ARCH`：`arm64`
 - 固件流程：self-contained payload -> Linux
 - 设备树：构建时生成静态 DTB，并嵌入 payload
-- 默认 QEMU：`/home/lurker/workspace/arm64-simpoint/arm-qemu/build/qemu-system-aarch64`
+- 默认 QEMU：`qemu-system-aarch64`
 - 默认 machine：`mini-virt`
 - 默认 profile：`hello`
 - 默认 workload：`apps/hello`
@@ -71,7 +71,7 @@ git make tar bash python3 dtc
 需要 AArch64 Linux 用户态交叉工具链，并显式传入前缀：
 
 ```sh
-export AARCH64_CROSS=/home/lurker/tools/arm-compiler/bin/aarch64-none-linux-gnu-
+export AARCH64_CROSS=/path/to/aarch64-none-linux-gnu-
 ```
 
 `AARCH64_CROSS` 是前缀，不包含 `gcc`。
@@ -142,7 +142,7 @@ build/plat/qemu-minivirt-aarch64/hello/run-qemu.sh
 如需临时覆盖 QEMU 路径：
 
 ```sh
-QEMU_SYSTEM_AARCH64=/home/lurker/workspace/arm64-simpoint/arm-qemu/build/qemu-system-aarch64 \
+QEMU_SYSTEM_AARCH64=/path/to/qemu-system-aarch64 \
   build/plat/qemu-minivirt-aarch64/hello/run-qemu.sh
 ```
 

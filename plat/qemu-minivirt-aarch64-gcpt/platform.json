@@ -1,17 +1,36 @@
 {
   "arch": "aarch64",
   "linux_arch": "arm64",
-  "firmware": "payload",
-  "linux_defconfig": "configs/linux_defconfig",
+  "firmware": "gcpt",
+  "linux_defconfig": "../qemu-minivirt-aarch64/configs/linux_defconfig",
   "dtb": {
     "mode": "static"
   },
   "linux_embed_bootargs": true,
+  "resources": {
+    "libcheckpoint-for-aarch64": {
+      "type": "git",
+      "url": "https://github.com/tastynoob/libcheckpoint-for-aarch64.git",
+      "dest": "libcheckpoint-for-aarch64"
+    }
+  },
+  "gcpt": {
+    "link_address": "0x40000000",
+    "payload_position": "0x40200000"
+  },
   "payload": {
-    "base": "0x40000000",
+    "base": "0x40200000",
     "kernel_offset": "0x200000",
     "dtb_align": "0x200000"
   },
+  "reserved_memories": [
+    {
+      "name": "gcpt",
+      "start": "0x40000000",
+      "size": "0x200000",
+      "no_map": true
+    }
+  ],
   "defaults": {
     "harts": 1,
     "bootargs": "console=ttyAMA0 earlycon",

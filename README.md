@@ -11,6 +11,7 @@
 | `xiangshan` | `riscv` | OpenSBI payload | [`plat/xiangshan/README.md`](plat/xiangshan/README.md) |
 | `xiangshan-gcpt` | `riscv` | gcpt -> OpenSBI payload | [`plat/xiangshan-gcpt/README.md`](plat/xiangshan-gcpt/README.md) |
 | `qemu-minivirt-aarch64` | `aarch64` | self-contained payload | [`plat/qemu-minivirt-aarch64/README.md`](plat/qemu-minivirt-aarch64/README.md) |
+| `qemu-minivirt-aarch64-gcpt` | `aarch64` | gcpt -> self-contained payload | [`plat/qemu-minivirt-aarch64-gcpt/README.md`](plat/qemu-minivirt-aarch64-gcpt/README.md) |
 
 后续新增平台时，主 README 只记录公共约定；具体平台的资源、构建命令、产物路径和运行方式放在 `plat/<platform>/README.md`。
 

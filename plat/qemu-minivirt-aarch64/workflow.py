@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from arch.aarch64.firmware import payload as aarch64_payload
@@ -16,13 +17,44 @@ def _to_int(value: str | int | None, fallback: int) -> int:
     return int(value, 0)
 
 
+def _reserved_memory_dts(ctx: BuildContext) -> str:
+    entries = ctx.platform_config.get("reserved_memories", [])
+    if not entries:
+        return ""
+
+    lines = [
+        "    reserved-memory {",
+        "        #address-cells = <2>;",
+        "        #size-cells = <2>;",
+        "        ranges;",
+        "",
+    ]
+    for entry in entries:
+        name = str(entry["name"])
+        start = _to_int(entry["start"], 0)
+        size = _to_int(entry["size"], 0)
+        lines.extend(
+            [
+                f"        {name}@{start:x} {{",
+                f"            reg = <0x{start >> 32:x} 0x{start & 0xffffffff:x}",
+                f"                   0x{size >> 32:x} 0x{size & 0xffffffff:x}>;",
+            ]
+        )
+        if bool(entry.get("no_map", False)):
+            lines.append("            no-map;")
+        lines.extend(["        };", ""])
+    lines.append("    };")
+    return "\n".join(lines) + "\n\n"
+
+
 def doctor(ctx: BuildContext) -> list[Path]:
     required = [ctx.linux_defconfig()]
     return [path for path in required if not path.exists()]
 
 
 def doctor_tools(ctx: BuildContext) -> list[str]:
-    return ["dtc", str(ctx.default("qemu_binary", "qemu-system-aarch64"))]
+    qemu = os.environ.get("QEMU_SYSTEM_AARCH64") or str(ctx.default("qemu_binary", "qemu-system-aarch64"))
+    return ["dtc", qemu]
 
 
 def generate_dts(ctx: BuildContext) -> str:
@@ -32,13 +64,14 @@ def generate_dts(ctx: BuildContext) -> str:
 
     memory_base = _to_int(ctx.memory_base(), 0x40000000)
     memory_size = _to_int(ctx.memory_size(), 0x40000000)
+    reserved_memory = _reserved_memory_dts(ctx)
 
     return f"""\
 /dts-v1/;
 
 / {{
-    compatible = "unified-workload,qemu-minivirt-aarch64", "unified-workload,qemu-mini-virt";
-    model = "unified-workload qemu-minivirt-aarch64";
+    compatible = "unified-workload,{ctx.platform}", "unified-workload,qemu-minivirt-aarch64", "unified-workload,qemu-mini-virt";
+    model = "unified-workload {ctx.platform}";
     #address-cells = <2>;
     #size-cells = <2>;
     interrupt-parent = <&gic>;
@@ -54,6 +87,7 @@ def generate_dts(ctx: BuildContext) -> str:
                0x{memory_size >> 32:x} 0x{memory_size & 0xffffffff:x}>;
     }};
 
+{reserved_memory}\
     cpus {{
         #address-cells = <1>;
         #size-cells = <0>;
