@@ -31,6 +31,7 @@ def build_workload(ctx: BuildContext) -> Path:
                 "-C",
                 str(source_dir),
                 f"CROSS_COMPILE={ctx.args.cross_compile}",
+                f"PLATFORM={ctx.platform}",
                 f"APP={binary}",
                 f"DST_DIR={ctx.profile_build_dir() / 'workload' / 'obj'}",
             ],
@@ -46,6 +47,10 @@ def build_workload(ctx: BuildContext) -> Path:
             "-O2",
             "-Wall",
             "-Wextra",
+            "-I",
+            str(ctx.platform_dir() / "include"),
+            "-I",
+            str(ctx.root_dir / "include"),
             "-o",
             str(binary),
         ]

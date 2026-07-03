@@ -6,6 +6,10 @@ endif
 
 APP_DIR ?= $(shell pwd)
 INC_DIR += $(APP_DIR)/include/
+ifneq ($(PLATFORM),)
+INC_DIR += $(UNIFIED_WORKLOAD_HOME)/plat/$(PLATFORM)/include/
+endif
+INC_DIR += $(UNIFIED_WORKLOAD_HOME)/include/
 DST_DIR ?= $(APP_DIR)/build/
 APP ?= $(DST_DIR)/$(NAME)
 
