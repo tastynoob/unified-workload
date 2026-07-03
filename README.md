@@ -10,7 +10,7 @@
 | --- | --- | --- | --- |
 | `xiangshan` | `riscv` | OpenSBI payload | [`plat/xiangshan/README.md`](plat/xiangshan/README.md) |
 | `xiangshan-gcpt` | `riscv` | gcpt -> OpenSBI payload | [`plat/xiangshan-gcpt/README.md`](plat/xiangshan-gcpt/README.md) |
-| `qemu-virt-aarch64` | `aarch64` | TF-A -> U-Boot | [`plat/qemu-virt-aarch64/README.md`](plat/qemu-virt-aarch64/README.md) |
+| `qemu-minivirt-aarch64` | `aarch64` | self-contained payload | [`plat/qemu-minivirt-aarch64/README.md`](plat/qemu-minivirt-aarch64/README.md) |
 
 后续新增平台时，主 README 只记录公共约定；具体平台的资源、构建命令、产物路径和运行方式放在 `plat/<platform>/README.md`。
 
@@ -119,7 +119,7 @@ python3 workload.py build-kernel   --arch <arch> --platform <platform> --cross-c
 python3 workload.py build-firmware --arch <arch> --platform <platform> --cross-compile /path/to/<target-triplet>-
 ```
 
-平台可以提供兼容别名。例如 RISC-V/XiangShan 使用 `build-opensbi`，AArch64/QEMU virt 使用 `build-tfa`。
+平台可以提供兼容别名。例如 RISC-V/XiangShan 使用 `build-opensbi`。
 
 ## 添加 Workload
 
@@ -178,7 +178,7 @@ plat/<platform>/platform.json
 常用字段：
 
 - `arch`：平台所属架构。
-- `firmware`：平台固件制作类型，例如 `opensbi` 或 `tfa`。
+- `firmware`：平台固件制作类型，例如 `opensbi`、`payload` 或 `tfa`。
 - `linux_arch`：Linux Kbuild 使用的 `ARCH` 名称。未设置时默认等于 `arch`。
 - `linux_defconfig`：平台使用的 Linux defconfig。
 - `dts_generator`：平台使用的 DTS 生成器。

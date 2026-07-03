@@ -198,8 +198,13 @@ def command_print_plan(ctx: BuildContext) -> None:
     log(f"app source: {ctx.app_dir()}")
     log(f"workload binary: {ctx.workload_binary()}")
     log(f"initramfs list: {ctx.initramfs_list()}")
+    dtb_mode = ctx.platform_config.get("dtb", {}).get("mode") if isinstance(ctx.platform_config.get("dtb"), dict) else None
     if ctx.args.dts_generator or ctx.platform_config.get("dts_generator"):
         log(f"dts generator: {ctx.dts_generator_path()}")
+        log(f"dts: {ctx.dts_path()}")
+        log(f"dtb: {ctx.dtb_path()}")
+    elif dtb_mode == "static":
+        log(f"dts: {ctx.dts_path()}")
         log(f"dtb: {ctx.dtb_path()}")
     else:
         log("dtb: platform workflow does not use a static DTB")

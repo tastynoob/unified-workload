@@ -31,6 +31,29 @@ def set_linux_config(config_path: Path, key: str, value: str) -> None:
     config_path.write_text("".join(result), encoding="utf-8")
 
 
+def set_linux_config_bool(config_path: Path, key: str, enabled: bool) -> None:
+    if not config_path.exists():
+        raise BuildError(f"Linux config does not exist: {config_path}")
+
+    new_line = f"{key}=y\n" if enabled else f"# {key} is not set\n"
+    prefix = f"{key}="
+    disabled = f"# {key} is not set"
+    lines = config_path.read_text(encoding="utf-8").splitlines(keepends=True)
+
+    replaced = False
+    result = []
+    for line in lines:
+        if line.startswith(prefix) or line.startswith(disabled):
+            result.append(new_line)
+            replaced = True
+        else:
+            result.append(line)
+    if not replaced:
+        result.append(new_line)
+
+    config_path.write_text("".join(result), encoding="utf-8")
+
+
 def build_kernel(ctx: BuildContext, defconfig: Path) -> Path:
     linux = ensure_resource(ctx, "linux")
     initramfs = ctx.initramfs_list()
@@ -52,6 +75,10 @@ def build_kernel(ctx: BuildContext, defconfig: Path) -> Path:
         log(f"set CONFIG_INITRAMFS_SOURCE={initramfs}")
     else:
         set_linux_config(linux_config, "CONFIG_INITRAMFS_SOURCE", str(initramfs.resolve()))
+        if bool(ctx.platform_config.get("linux_embed_bootargs", False)):
+            set_linux_config(linux_config, "CONFIG_CMDLINE", ctx.bootargs())
+            set_linux_config_bool(linux_config, "CONFIG_CMDLINE_FORCE", True)
+            set_linux_config_bool(linux_config, "CONFIG_CMDLINE_FROM_BOOTLOADER", False)
 
     env = ctx.build_env()
     run(
