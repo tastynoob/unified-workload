@@ -45,6 +45,10 @@
     "hello": {
       "workload": "hello",
       "harts": 1
+    },
+    "gemm": {
+      "workload": "gemm",
+      "harts": 1
     }
   }
 }
