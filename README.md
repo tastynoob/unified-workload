@@ -124,6 +124,24 @@ python3 workload.py build-firmware --arch <arch> --platform <platform> --cross-c
 
 ## 添加 Workload
 
+当前仓库提供三个 workload 入口：
+
+- `hello`：最小 smoke test。
+- `gemm`：简单整数 GEMM kernel。
+- `coremark`：EEMBC CoreMark 包装入口。上游源码不纳入本仓库，先运行 `make -C apps/coremark init` clone 到 `apps/coremark/coremark/`；本仓库只维护 `apps/coremark/portable/` 下的 porting 层。默认静态链接，作为 `/init` 运行时不带参数，`ITERATIONS=0` 会让 CoreMark 自动选择约 10 秒的迭代次数。
+
+如果在模拟器上想控制 CoreMark 运行时间，可以通过环境变量固定迭代次数，例如 `COREMARK_ITERATIONS=1000 python3 workload.py build-workload ...`。
+
+平台配置已经提供 `coremark` profile，可以直接指定：
+
+```sh
+python3 workload.py all \
+  --arch <arch> \
+  --platform <platform> \
+  --profile coremark \
+  --cross-compile /path/to/<target-triplet>-
+```
+
 新的 workload 放到 `apps/<name>/` 下。最简单的 C app 可以复用公共 Makefile：
 
 ```make

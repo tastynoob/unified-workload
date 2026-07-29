@@ -6,13 +6,14 @@
 #define SIMTRAP_NOTIFY_PROFILER 0x101
 #define SIMTRAP_NOTIFY_WORKLOAD_EXIT 0x102
 
-static inline void simtrap_signal(long signal)
-{
-    (void)signal;
-}
+#define UW_SIMTRAP_STRINGIFY_1(x) #x
+#define UW_SIMTRAP_STRINGIFY(x) UW_SIMTRAP_STRINGIFY_1(x)
+#define UW_SIMTRAP_HLT(imm) \
+    asm volatile("hlt #" UW_SIMTRAP_STRINGIFY(imm) ::: "memory")
 
-#define SIMTRAP_SIGNAL(signal) ((void)(signal))
+#define SIMTRAP_SIGNAL_IMM(imm) UW_SIMTRAP_HLT(imm)
+#define SIMTRAP_SIGNAL(imm) SIMTRAP_SIGNAL_IMM(imm)
 #define SIMTRAP_PROFILE_START() ((void)0)
-#define SIMTRAP_PROFILE_STOP() ((void)0)
+#define SIMTRAP_PROFILE_STOP() SIMTRAP_SIGNAL_IMM(SIMTRAP_NOTIFY_WORKLOAD_EXIT)
 
 #endif

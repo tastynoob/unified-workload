@@ -5,6 +5,9 @@
 /external/
 /cache/
 
+# Cloned by apps/coremark/Makefile:init
+/apps/coremark/coremark/
+
 # Python cache
 __pycache__/
 *.py[cod]

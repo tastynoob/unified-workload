@@ -49,6 +49,10 @@
     "gemm": {
       "workload": "gemm",
       "harts": 1
+    },
+    "coremark": {
+      "workload": "coremark",
+      "harts": 1
     }
   }
 }
