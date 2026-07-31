@@ -9,15 +9,16 @@ Current boot path:
 gcpt.bin -> AArch64 restorer -> embedded AArch64 payload -> Linux kernel -> /init
 ```
 
-The AArch64 GCPT layer disables interrupts, initializes the PL011 UART by
-itself, checks for checkpoint metadata, and falls back to the normal payload when
-no checkpoint is present.
+The AArch64 GCPT boot wrapper checks for snapshot magic before entering the C
+restorer. Without a checkpoint it branches directly to the normal payload. The
+successful restore path stays silent; PL011 is initialized only for error
+messages. Restore failure halts in the wrapper instead of booting the payload.
 
 ## Layout
 
 ```text
 0x40000000: gcpt boot wrapper
-0x40100000: checkpoint metadata or default core-0 register data
+0x40100000: streaming checkpoint snapshot
 0x40200000: embedded AArch64 payload
 0x40400000: Linux Image inside the embedded payload
 ```
@@ -32,29 +33,12 @@ Within that reserved range, the current split is:
 
 ```text
 0x40000000..0x400fffff: restorer window, 1 MiB
-0x40100000..0x401fffff: checkpoint metadata/default core data window, 1 MiB
+0x40100000..0x401fffff: checkpoint metadata/snapshot window, 1 MiB
 ```
 
-The default per-core register stride is 1 MiB, matching the RISC-V
-libcheckpoint style. The current fixed AArch64 register layout uses up to
-`0x70050` bytes per core when all present blocks are included, or `0x6210` bytes
-for the base state through FPSIMD.
-
-This 2 MiB reservation does not support 128 cores. With the current 1 MiB
-per-core stride, a 128-core checkpoint needs:
-
-```text
-0x100000 restorer window
-0x007000 metadata for header + 128 per-core layouts
-0x8000000 register stride area for 128 cores
-= 0x8107000 bytes before payload
-```
-
-Rounded to the existing 2 MiB alignment, the payload would need to move from
-`0x40200000` to at least `0x48200000`. If the future format uses the current
-compact `0x70050` bytes of actual full register data per core instead of the
-1 MiB stride, 128 cores need `0x3909800` bytes before alignment, rounded to
-`0x3a00000`, so the payload would need to start at `0x43a00000`.
+The AArch64 checkpoint layout is a single `a64_snapshot_header` followed by
+compact raw register blocks. Without `A64_CPT_SNAPSHOT_MAGIC` at `0x40100000`,
+the restorer boots the embedded payload normally.
 
 ## External Resource
 

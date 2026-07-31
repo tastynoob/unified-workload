@@ -91,8 +91,72 @@ _start:
 
 enter_from_el3:
     mov x6, #0x501
+    movk x6, #0x3, lsl #16
+    mov x7, xzr
+    mov x9, xzr
+
+    mrs x8, id_aa64pfr0_el1
+    ubfx x10, x8, #32, #4
+    cbz x10, no_el3_sve
+    orr x7, x7, #(1 << 8)
+    orr x9, x9, #1
+no_el3_sve:
+
+    mrs x8, id_aa64pfr1_el1
+    ubfx x10, x8, #8, #4
+    cmp x10, #2
+    b.lo no_el3_mte
+    orr x6, x6, #(1 << 26)
+no_el3_mte:
+    ubfx x10, x8, #24, #4
+    cbz x10, no_el3_sme
+    orr x6, x6, #(1 << 41)
+    orr x7, x7, #(1 << 12)
+    orr x9, x9, #2
+no_el3_sme:
+
+    mrs x8, id_aa64mmfr0_el1
+    ubfx x10, x8, #56, #4
+    cbz x10, no_el3_fgt
+    orr x6, x6, #(1 << 27)
+no_el3_fgt:
+
+    mrs x8, id_aa64mmfr1_el1
+    ubfx x10, x8, #40, #4
+    cbz x10, no_el3_hcx
+    orr x6, x6, #(1 << 38)
+no_el3_hcx:
+
+    mrs x8, S3_0_C0_C7_3
+    ubfx x10, x8, #0, #4
+    cbz x10, no_el3_tcr2
+    orr x6, x6, #(1 << 43)
+no_el3_tcr2:
+    ubfx x10, x8, #8, #4
+    cbz x10, no_el3_s1pie
+    orr x6, x6, #(1 << 45)
+no_el3_s1pie:
+
     msr scr_el3, x6
-    msr cptr_el3, xzr
+    msr cptr_el3, x7
+    isb
+
+    tbz x9, #0, done_el3_sve
+    mov x8, #0xf
+    msr S3_6_C1_C2_0, x8
+done_el3_sve:
+    tbz x9, #1, done_el3_sme
+    mov x10, #0xf
+    mrs x8, S3_0_C0_C4_5
+    tbz x8, #63, no_el3_sme_fa64
+    orr x10, x10, #(1 << 31)
+no_el3_sme_fa64:
+    ubfx x8, x8, #56, #4
+    cbz x8, no_el3_sme2
+    orr x10, x10, #(1 << 30)
+no_el3_sme2:
+    msr S3_6_C1_C2_6, x10
+done_el3_sme:
     mov x6, #(1 << 31)
     msr hcr_el2, x6
     mov x6, #0x3
