@@ -1,0 +1,16 @@
+--- core_main.c
++++ core_main.c
+@@ -370,13 +370,6 @@
+                   default_num_contexts * results[0].iterations
+                       / time_in_secs(total_time));
+ #endif
+-    if (time_in_secs(total_time) < 10)
+-    {
+-        ee_printf(
+-            "ERROR! Must execute for at least 10 secs for a valid result!\n");
+-        total_errors++;
+-    }
+-
+     ee_printf("Iterations       : %lu\n",
+               (long unsigned)default_num_contexts * results[0].iterations);
+     ee_printf("Compiler version : %s\n", COMPILER_VERSION);

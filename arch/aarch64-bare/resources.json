@@ -1,0 +1,9 @@
+{
+  "resources": {
+    "libcheckpoint-for-aarch64": {
+      "type": "git",
+      "url": "https://github.com/tastynoob/libcheckpoint-for-aarch64.git",
+      "dest": "libcheckpoint-for-aarch64"
+    }
+  }
+}

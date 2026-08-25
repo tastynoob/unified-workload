@@ -14,6 +14,12 @@ INCLUDES = $(addprefix -I, $(INC_DIR))
 CFLAGS += -O2 -MMD $(INCLUDES)
 CXXFLAGS += -O2 -MMD $(INCLUDES)
 
+ifeq ($(BAREMETAL),1)
+CFLAGS += $(BARE_CFLAGS)
+CXXFLAGS += $(BARE_CXXFLAGS)
+LDFLAGS += $(BARE_LDFLAGS)
+endif
+
 OBJS = $(addprefix $(DST_DIR)/, $(addsuffix .o, $(basename $(SRCS))))
 
 $(DST_DIR)/%.o: %.cpp
@@ -26,10 +32,10 @@ $(DST_DIR)/%.o: %.c
 	@mkdir -p $(dir $@)
 	@$(CC) $(CFLAGS) -c -o $@ $<
 
-$(APP): $(OBJS)
+$(APP): $(OBJS) $(EXTRA_OBJS)
 	@echo + LD $@
 	@mkdir -p $(dir $@)
-	@$(LD) $(LDFLAGS) -o $(APP) $(OBJS)
+	@$(LD) $(LDFLAGS) -o $(APP) $(OBJS) $(EXTRA_OBJS) $(LDLIBS)
 
 DEPS = $(addprefix $(DST_DIR)/, $(addsuffix .d, $(basename $(SRCS))))
 -include $(DEPS)

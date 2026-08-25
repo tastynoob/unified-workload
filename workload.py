@@ -211,15 +211,24 @@ def command_print_plan(ctx: BuildContext) -> None:
     log(f"harts: {ctx.harts()}")
     for name in resource_names(ctx):
         log(f"resource {name}: {resource_path(ctx, name)}")
-    log(f"linux defconfig: {ctx.linux_defconfig()}")
+    if not bool(ctx.platform_config.get("baremetal", False)):
+        log(f"linux defconfig: {ctx.linux_defconfig()}")
     if "opensbi" in resource_names(ctx):
         log(f"opensbi platform: {ctx.opensbi_platform}")
     log(f"build dir: {ctx.profile_build_dir()}")
     log(f"final payload: {ctx.platform_workflow.final_payload(ctx)}")
 
 
-def command_all(ctx: BuildContext) -> None:
+def command_build_workload(ctx: BuildContext) -> None:
+    platform_builder = getattr(ctx.platform_workflow, "build_workload", None)
+    if platform_builder is not None:
+        platform_builder(ctx)
+        return
     build_workload(ctx)
+
+
+def command_all(ctx: BuildContext) -> None:
+    command_build_workload(ctx)
     ctx.platform_workflow.build_dtb(ctx)
     ctx.platform_workflow.build_kernel(ctx)
     ctx.platform_workflow.build_firmware(ctx)
@@ -239,7 +248,7 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
         elif args.command == "print-plan":
             command_print_plan(ctx)
         elif args.command == "build-workload":
-            build_workload(ctx)
+            command_build_workload(ctx)
         elif args.command == "build-dtb":
             ctx.platform_workflow.build_dtb(ctx)
         elif args.command == "build-kernel":

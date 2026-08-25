@@ -10,7 +10,7 @@
 #define UW_SIMTRAP_STRINGIFY_1(x) #x
 #define UW_SIMTRAP_STRINGIFY(x) UW_SIMTRAP_STRINGIFY_1(x)
 #define UW_SIMTRAP_HLT(imm) \
-    asm volatile("hlt #" UW_SIMTRAP_STRINGIFY(imm) ::: "memory")
+    __asm__ volatile("hlt #" UW_SIMTRAP_STRINGIFY(imm) ::: "memory")
 
 #define SIMTRAP_SIGNAL_IMM(imm) UW_SIMTRAP_HLT(imm)
 #define SIMTRAP_SIGNAL(imm) SIMTRAP_SIGNAL_IMM(imm)
