@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import shutil
 from pathlib import Path
 
@@ -64,7 +65,12 @@ def build_kernel(ctx: BuildContext, defconfig: Path) -> Path:
     if not defconfig.exists():
         raise BuildError(f"Linux defconfig does not exist: {defconfig}")
 
-    build_dir = ctx.profile_build_dir() / "linux"
+    configured_build_dir = os.environ.get("LINUX_KBUILD_DIR")
+    build_dir = (
+        Path(configured_build_dir).expanduser().resolve()
+        if configured_build_dir
+        else ctx.profile_build_dir() / "linux"
+    )
     linux_config = build_dir / ".config"
     log(f"install Linux config {defconfig} -> {linux_config}")
     if not ctx.args.dry_run:
@@ -109,14 +115,21 @@ def build_kernel(ctx: BuildContext, defconfig: Path) -> Path:
         dry_run=ctx.args.dry_run,
     )
 
-    image = ctx.linux_image()
+    image = build_dir / "arch" / ctx.linux_arch / "boot" / "Image"
+    output_image = ctx.linux_image()
     if not ctx.args.dry_run and not image.exists():
         raise BuildError(f"Expected Linux Image does not exist: {image}")
+    if not ctx.args.dry_run and image.resolve() != output_image.resolve():
+        log(f"install Linux Image {image} -> {output_image}")
+        output_image.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(image, output_image)
+
     generated_initramfs = build_dir / "usr" / "initramfs_data.cpio"
     initramfs_cpio = ctx.initramfs_cpio()
     log(f"install initramfs cpio {generated_initramfs} -> {initramfs_cpio}")
     if not ctx.args.dry_run:
         if not generated_initramfs.exists():
             raise BuildError(f"Expected initramfs cpio does not exist: {generated_initramfs}")
+        initramfs_cpio.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(generated_initramfs, initramfs_cpio)
-    return image
+    return output_image

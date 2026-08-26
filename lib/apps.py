@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from lib.common import BuildError, run, write_text
@@ -11,6 +12,36 @@ def discover_c_sources(path: Path) -> list[Path]:
     if path.is_file():
         return [path] if path.suffix == ".c" else []
     return sorted(path.glob("*.c"))
+
+
+def _spec_cross_compile(ctx: BuildContext) -> str:
+    if ctx.selected_workload() == "spec":
+        return os.environ.get("SPEC_CROSS_COMPILE", ctx.args.cross_compile)
+    return ctx.args.cross_compile
+
+
+def _spec_input_manifest(ctx: BuildContext) -> str:
+    if ctx.selected_workload() != "spec":
+        return ""
+
+    benchmark = os.environ.get("SPEC_BENCHMARK", "401.bzip2")
+    input_dir = (
+        ctx.profile_build_dir()
+        / "workload"
+        / "obj"
+        / "spec"
+        / benchmark
+        / "inputs"
+    )
+    if not input_dir.is_dir():
+        return ""
+
+    lines = []
+    for path in sorted(input_dir.rglob("*")):
+        if path.is_file():
+            relative = path.relative_to(input_dir).as_posix()
+            lines.append(f"file /{relative} {path.resolve()} 644 0 0")
+    return "\n".join(lines)
 
 
 def build_workload(ctx: BuildContext) -> Path:
@@ -25,12 +56,13 @@ def build_workload(ctx: BuildContext) -> Path:
     if makefile is not None and makefile.exists():
         make_env = ctx.build_env()
         make_env["UNIFIED_WORKLOAD_HOME"] = str(ctx.root_dir)
+        cross_compile = _spec_cross_compile(ctx)
         run(
             [
                 "make",
                 "-C",
                 str(source_dir),
-                f"CROSS_COMPILE={ctx.args.cross_compile}",
+                f"CROSS_COMPILE={cross_compile}",
                 f"PLATFORM={ctx.platform}",
                 f"APP={binary}",
                 f"DST_DIR={ctx.profile_build_dir() / 'workload' / 'obj'}",
@@ -69,5 +101,8 @@ nod /dev/null 644 0 0 c 1 3
 
 file /init {binary.resolve()} 755 0 0
 """
+    spec_inputs = _spec_input_manifest(ctx)
+    if spec_inputs:
+        manifest += "\n" + spec_inputs + "\n"
     write_text(initramfs, manifest, ctx.args.dry_run)
     return initramfs
