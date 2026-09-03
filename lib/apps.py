@@ -36,11 +36,20 @@ def _spec_input_manifest(ctx: BuildContext) -> str:
     if not input_dir.is_dir():
         return ""
 
-    lines = []
-    for path in sorted(input_dir.rglob("*")):
-        if path.is_file():
-            relative = path.relative_to(input_dir).as_posix()
-            lines.append(f"file /{relative} {path.resolve()} 644 0 0")
+    files = sorted(path for path in input_dir.rglob("*") if path.is_file())
+    directories: set[Path] = set()
+    for path in files:
+        relative = path.relative_to(input_dir)
+        directories.update(parent for parent in relative.parents if parent != Path("."))
+    directory_lines = [
+        f"dir /{relative.as_posix()} 755 0 0"
+        for relative in sorted(directories, key=lambda path: (len(path.parts), path.as_posix()))
+    ]
+    file_lines = [
+        f"file /{path.relative_to(input_dir).as_posix()} {path.resolve()} 644 0 0"
+        for path in files
+    ]
+    lines = directory_lines + file_lines
     return "\n".join(lines)
 
 

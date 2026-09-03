@@ -68,6 +68,8 @@ esac
 
 simpoint_request=${SIMPOINT_BIN:-simpoint}
 simpoint=$(resolve_executable "$simpoint_request")
+max_k=${SIMPOINT_MAX_K:-$MAX_K}
+[[ "$max_k" =~ ^[1-9][0-9]*$ ]] || die "SIMPOINT_MAX_K must be a positive integer"
 mkdir -p "$cluster_dir"
 
 simpoint_args=(
@@ -76,7 +78,7 @@ simpoint_args=(
     -saveSimpoints "$cluster_dir/simpoints0"
     -saveSimpointWeights "$cluster_dir/weights0"
     -inputVectorsGzipped
-    -maxK "$MAX_K"
+    -maxK "$max_k"
     -numInitSeeds "$NUM_INIT_SEEDS"
     -iters "$ITERS"
     -seedkm "$SEED_KM"

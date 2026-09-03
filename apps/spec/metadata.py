@@ -130,10 +130,10 @@ CPU2017_BENCHMARKS = {
             "-DPERL_CORE -I. -Idist/IO -Icpan/Time-HiRes "
             "-Icpan/HTML-Parser -Iext/re -Ispecrand "
             "-DDOUBLE_SLASHES_SPECIAL=0 -D_LARGE_FILES "
-            "-D_LARGEFILE_SOURCE -DSPEC_LINUX_AARCH64 -DSPEC_LINUX "
-            "-D_DEFAULT_SOURCE"
+            "-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 "
+            "-DSPEC_LINUX_X64 -DSPEC_LINUX -D_DEFAULT_SOURCE "
+            "-DSPEC_LP64 -DSPEC_AUTO_SUPPRESS_OPENMP"
         ),
-        cflags="-fno-unsafe-math-optimizations -fno-finite-math-only",
         ldflags="-Wl,-z,muldefs",
         libs="-lm",
     ),
@@ -345,6 +345,10 @@ def cpu2017_metadata(text: str, benchmark: str) -> BuildMetadata:
     if need_math and "-lm" not in libs.split():
         libs = join_flags(libs, "-lm")
     bench_flags = parse_perl_string_assignments(text, "bench_flags")
+    if name == "perlbench":
+        # object.pm appends Windows-only flags inside a Perl conditional.
+        # The LiteWrapper Linux configuration is captured in defaults above.
+        bench_flags = ""
     if name == "deepsjeng":
         bench_flags = " ".join(
             flag for flag in bench_flags.split() if flag != "-DBIG_MEMORY"
@@ -408,13 +412,18 @@ def main() -> int:
     if missing:
         parser.error("source files missing from SPEC tree: " + ", ".join(missing))
 
-    if has_fortran(language, sources):
+    fortran = has_fortran(language, sources)
+    if fortran and not (
+        args.suite == "2017" and args.benchmark == "548.exchange2_r"
+    ):
         parser.error(
             f"unsupported CPU{args.suite} benchmark {args.benchmark}: "
             "Fortran sources are not supported by the Linux workload adapter"
         )
 
-    if has_cxx(language, sources):
+    if fortran:
+        link_language = "FC"
+    elif has_cxx(language, sources):
         link_language = "CXX"
     else:
         link_language = "CC"

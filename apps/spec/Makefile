@@ -95,7 +95,7 @@ SPEC_OPTIMIZE ?= -O3
 ifeq ($(SPEC_SUITE_RESOLVED),2017)
 SPEC_COMMON_FLAGS := -MMD -MP -DSPEC -DNDEBUG -D_FILE_OFFSET_BITS=64 \
 	-fno-strict-aliasing -DSPEC_LP64 -DSPEC_AUTO_SUPPRESS_OPENMP
-SPEC_COMMON_CFLAGS := -std=c99
+SPEC_COMMON_CFLAGS := -std=c99 -fgnu89-inline
 SPEC_COMMON_CXXFLAGS := -std=c++03
 else
 SPEC_COMMON_FLAGS := -MMD -MP -DSPEC_CPU -DNDEBUG -D_FILE_OFFSET_BITS=64 \
@@ -202,6 +202,11 @@ $(SPEC_OBJ_DIR)/%.o: $(SPEC_STAGE_DIR)/%.f
 	@cd $(SPEC_STAGE_DIR) && $(FC) $(FFLAGS) -c -o $(abspath $@) $(abspath $<)
 
 $(SPEC_OBJ_DIR)/%.o: $(SPEC_STAGE_DIR)/%.f90
+	@echo + FC $<
+	@mkdir -p $(dir $@) $(SPEC_MOD_DIR)
+	@cd $(SPEC_STAGE_DIR) && $(FC) $(FFLAGS) -c -o $(abspath $@) $(abspath $<)
+
+$(SPEC_OBJ_DIR)/%.o: $(SPEC_STAGE_DIR)/%.F90
 	@echo + FC $<
 	@mkdir -p $(dir $@) $(SPEC_MOD_DIR)
 	@cd $(SPEC_STAGE_DIR) && $(FC) $(FFLAGS) -c -o $(abspath $@) $(abspath $<)
