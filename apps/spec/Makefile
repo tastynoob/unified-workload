@@ -10,6 +10,9 @@ SPEC_ROOT ?= $(abspath $(SPEC_BENCHSPEC)/..)
 SPEC_SUITE ?= auto
 SPEC_SIZE ?= test
 SPEC_ARGS ?=
+SPEC_STDIN ?=
+SPEC_STDOUT ?=
+SPEC_STDERR ?=
 
 ifeq ($(strip $(CROSS_COMPILE)),)
 $(error CROSS_COMPILE is not defined)
@@ -44,8 +47,8 @@ SPEC_BENCH_DIR := $(SPEC_CPU2006_BENCH_DIR)
 endif
 
 SPEC_OBJECT_PM := $(SPEC_BENCH_DIR)/Spec/object.pm
-SPEC_SOURCE_DIR := $(SPEC_BENCH_DIR)/src
-SPEC_WORK_DIR := $(abspath $(DST_DIR)/spec/$(SPEC_BENCHMARK))
+SPEC_SOURCE_DIR ?= $(SPEC_BENCH_DIR)/src
+SPEC_WORK_DIR ?= $(abspath $(DST_DIR)/spec/$(SPEC_BENCHMARK))
 SPEC_STAGE_DIR := $(SPEC_WORK_DIR)/src
 SPEC_OBJ_DIR := $(SPEC_WORK_DIR)/obj
 SPEC_PREP_DIR := $(SPEC_WORK_DIR)/preprocessed
@@ -56,8 +59,15 @@ SPEC_RUNTIME_CONFIG_C := $(SPEC_RUNTIME_DIR)/spec_runtime_config.c
 SPEC_RUNTIME_CONFIG_OBJ := $(SPEC_RUNTIME_DIR)/spec_runtime_config.o
 SPEC_PROFILE_OBJ := $(SPEC_RUNTIME_DIR)/profile_runtime.o
 SPEC_INPUT_STAGE_DIR := $(SPEC_WORK_DIR)/inputs
+SPEC_SPECPP_ROOT ?= $(SPEC_ROOT)
+SPEC_SPECPP := /usr/bin/perl \
+	-I$(SPEC_SPECPP_ROOT)/bin/common \
+	-I$(SPEC_SPECPP_ROOT)/bin/harness \
+	-I$(SPEC_SPECPP_ROOT)/bin \
+	-I$(SPEC_SPECPP_ROOT)/bin/lib \
+	$(SPEC_SPECPP_ROOT)/bin/harness/specpp
 
-export SPEC_ARGS
+export SPEC_ARGS SPEC_STDIN SPEC_STDOUT SPEC_STDERR
 
 ifeq ($(wildcard $(SPEC_OBJECT_PM)),)
 $(error CPU$(SPEC_SUITE_RESOLVED) benchmark metadata does not exist: $(SPEC_OBJECT_PM))
@@ -95,11 +105,14 @@ SPEC_OPTIMIZE ?= -O3
 ifeq ($(SPEC_SUITE_RESOLVED),2017)
 SPEC_COMMON_FLAGS := -MMD -MP -DSPEC -DNDEBUG -D_FILE_OFFSET_BITS=64 \
 	-fno-strict-aliasing -DSPEC_LP64 -DSPEC_AUTO_SUPPRESS_OPENMP
+SPEC_FPP_COMMON_FLAGS := -DSPEC -DNDEBUG -DSPEC_LP64 \
+	-DSPEC_AUTO_SUPPRESS_OPENMP
 SPEC_COMMON_CFLAGS := -std=c99 -fgnu89-inline
 SPEC_COMMON_CXXFLAGS := -std=c++03
 else
 SPEC_COMMON_FLAGS := -MMD -MP -DSPEC_CPU -DNDEBUG -D_FILE_OFFSET_BITS=64 \
 	-fno-strict-aliasing -DSPEC_CPU_LP64
+SPEC_FPP_COMMON_FLAGS := -DSPEC_CPU -DNDEBUG -DSPEC_CPU_LP64
 endif
 SPEC_COMPAT_CFLAGS := -Wno-implicit-int -Wno-int-conversion \
 	-Wno-incompatible-pointer-types -Wno-implicit-function-declaration
@@ -206,10 +219,29 @@ $(SPEC_OBJ_DIR)/%.o: $(SPEC_STAGE_DIR)/%.f90
 	@mkdir -p $(dir $@) $(SPEC_MOD_DIR)
 	@cd $(SPEC_STAGE_DIR) && $(FC) $(FFLAGS) -c -o $(abspath $@) $(abspath $<)
 
-$(SPEC_OBJ_DIR)/%.o: $(SPEC_STAGE_DIR)/%.F90
+$(SPEC_PREP_DIR)/%.f: $(SPEC_STAGE_DIR)/%.F
+	@echo + FPP $<
+	@mkdir -p $(dir $@)
+	@cd $(SPEC_STAGE_DIR) && SPEC=$(SPEC_SPECPP_ROOT) \
+		$(SPEC_SPECPP) $(SPEC_FPP_COMMON_FLAGS) $(SPEC_BENCH_FPPFLAGS) \
+		-o $(abspath $@) $(abspath $<)
+
+$(SPEC_PREP_DIR)/%.f90: $(SPEC_STAGE_DIR)/%.F90
+	@echo + FPP $<
+	@mkdir -p $(dir $@)
+	@cd $(SPEC_STAGE_DIR) && SPEC=$(SPEC_SPECPP_ROOT) \
+		$(SPEC_SPECPP) $(SPEC_FPP_COMMON_FLAGS) $(SPEC_BENCH_FPPFLAGS) \
+		-o $(abspath $@) $(abspath $<)
+
+$(SPEC_OBJ_DIR)/%.o: $(SPEC_PREP_DIR)/%.f
 	@echo + FC $<
 	@mkdir -p $(dir $@) $(SPEC_MOD_DIR)
-	@cd $(SPEC_STAGE_DIR) && $(FC) $(FFLAGS) -c -o $(abspath $@) $(abspath $<)
+	@cd $(SPEC_PREP_DIR) && $(FC) $(FFLAGS) -cpp -c -o $(abspath $@) $(abspath $<)
+
+$(SPEC_OBJ_DIR)/%.o: $(SPEC_PREP_DIR)/%.f90
+	@echo + FC $<
+	@mkdir -p $(dir $@) $(SPEC_MOD_DIR)
+	@cd $(SPEC_PREP_DIR) && $(FC) $(FFLAGS) -cpp -c -o $(abspath $@) $(abspath $<)
 
 $(APP): $(SPEC_OBJS) $(SPEC_RUNTIME_CONFIG_OBJ) $(SPEC_PROFILE_OBJ)
 	@echo + LD $@

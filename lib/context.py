@@ -38,14 +38,6 @@ class BuildContext:
         return self.args.profile
 
     @property
-    def profile(self) -> Mapping[str, Any]:
-        profiles = self.platform_config.get("profiles", {})
-        if self.profile_name not in profiles:
-            names = ", ".join(sorted(profiles))
-            raise BuildError(f"Unknown profile '{self.profile_name}'. Available profiles: {names}")
-        return profiles[self.profile_name]
-
-    @property
     def firmware(self) -> str:
         return str(self.platform_config.get("firmware", ""))
 
@@ -62,9 +54,6 @@ class BuildContext:
 
     def default(self, name: str, fallback: Any = None) -> Any:
         return self.platform_config.get("defaults", {}).get(name, fallback)
-
-    def profile_value(self, name: str, fallback: Any = None) -> Any:
-        return self.profile.get(name, fallback)
 
     def build_env(self) -> dict[str, str]:
         env = os.environ.copy()
@@ -91,7 +80,7 @@ class BuildContext:
         return self.args.build_dir / "plat" / self.platform / self.profile_name
 
     def selected_workload(self) -> str:
-        return self.args.workload or str(self.profile_value("workload"))
+        return self.args.workload or self.profile_name
 
     def app_dir(self) -> Path:
         if self.args.workload_dir is not None:
@@ -141,7 +130,7 @@ class BuildContext:
     def harts(self) -> int:
         value = self.args.harts
         if value is None:
-            value = self.profile_value("harts", self.default("harts", 1))
+            value = self.default("harts", 1)
         value = int(value)
         if value < 1:
             raise BuildError("--harts must be >= 1")

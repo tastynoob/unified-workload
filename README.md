@@ -150,7 +150,6 @@ plat/<platform>/platform.json
 - `linux_arch`：Linux Kbuild 使用的 `ARCH` 名称。未设置时默认等于 `arch`。
 - `linux_defconfig`：平台使用的 Linux defconfig。
 - `dts_generator`：平台使用的 DTS 生成器。
-- `profiles`：不同 workload profile。
 
 平台构建逻辑放在：
 
@@ -171,6 +170,9 @@ arch/<arch>/firmware/
 ```sh
 python3 workload.py all --arch <arch> --platform <platform> --profile hello --cross-compile /path/to/<target-triplet>-
 ```
+
+profile 默认选择同名的 `apps/<profile>`，同时作为构建输出目录名。需要让输出目录名与
+app 名称不同时，再使用 `--workload <app>` 覆盖。
 
 指定 hart/CPU 数量：
 

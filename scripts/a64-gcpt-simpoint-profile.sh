@@ -7,7 +7,7 @@ source "$script_dir/a64-gcpt-simpoint-config.sh"
 
 usage()
 {
-    printf 'Usage: %s <gcpt-path> <profile-dir>\n' "$(basename "$0")"
+    printf 'Usage: %s <gcpt-path> <profile-dir> [stdin-path]\n' "$(basename "$0")"
     printf '\nThe profile is written to <profile-dir>/simpoint_bbv.gz.\n'
 }
 
@@ -77,14 +77,18 @@ if [[ $# -eq 1 && ( "$1" == "-h" || "$1" == "--help" ) ]]; then
     usage
     exit 0
 fi
-[[ $# -eq 2 ]] || {
+[[ $# -ge 2 && $# -le 3 ]] || {
     usage >&2
     exit 2
 }
 
 gcpt_path=$1
 profile_dir=$2
+stdin_path=${3:-}
 require_file "$gcpt_path"
+if [[ -n "$stdin_path" ]]; then
+    require_file "$stdin_path"
+fi
 
 case "$profile_dir" in
     *,*)
@@ -114,4 +118,8 @@ qemu_args=(
 )
 
 print_command "${qemu_args[@]}"
-exec "${qemu_args[@]}"
+if [[ -n "$stdin_path" ]]; then
+    exec "${qemu_args[@]}" < "$stdin_path"
+else
+    exec "${qemu_args[@]}"
+fi

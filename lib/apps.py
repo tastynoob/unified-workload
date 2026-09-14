@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+from lib import any_app
 from lib.common import BuildError, run, write_text
 from lib.context import BuildContext
 from lib.toolchain import cross_gcc
@@ -25,14 +26,18 @@ def _spec_input_manifest(ctx: BuildContext) -> str:
         return ""
 
     benchmark = os.environ.get("SPEC_BENCHMARK", "401.bzip2")
-    input_dir = (
-        ctx.profile_build_dir()
-        / "workload"
-        / "obj"
-        / "spec"
-        / benchmark
-        / "inputs"
-    )
+    configured_work_dir = os.environ.get("SPEC_WORK_DIR")
+    if configured_work_dir:
+        input_dir = Path(configured_work_dir).expanduser().resolve() / "inputs"
+    else:
+        input_dir = (
+            ctx.profile_build_dir()
+            / "workload"
+            / "obj"
+            / "spec"
+            / benchmark
+            / "inputs"
+        )
     if not input_dir.is_dir():
         return ""
 
@@ -54,6 +59,9 @@ def _spec_input_manifest(ctx: BuildContext) -> str:
 
 
 def build_workload(ctx: BuildContext) -> Path:
+    if ctx.selected_workload() == "any":
+        return any_app.build(ctx)
+
     source_dir = ctx.app_dir()
     sources = discover_c_sources(source_dir)
 

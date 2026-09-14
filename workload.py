@@ -10,6 +10,7 @@ import sys
 from pathlib import Path
 from typing import Iterable, Optional
 
+from lib.any_app import load_config as load_any_config
 from lib.apps import build_workload
 from lib.common import BuildError, load_json, load_symbol, log
 from lib.context import (
@@ -74,6 +75,16 @@ def make_parser() -> argparse.ArgumentParser:
     parser.add_argument("--workload-dir", type=Path, help="external app source directory or C file")
     parser.add_argument("--cflags", action="append", default=[], help="extra workload CFLAGS")
     parser.add_argument("--ldflags", action="append", default=[], help="extra workload LDFLAGS")
+    parser.add_argument(
+        "--any-elf", type=Path, help="external ELF used by the any workload"
+    )
+    parser.add_argument(
+        "--any-file",
+        action="append",
+        default=[],
+        metavar="HOST=GUEST",
+        help="file or directory mapped into the any initramfs",
+    )
     parser.add_argument("--device", dest="platform", help=argparse.SUPPRESS)
     parser.add_argument("--dts-generator", type=Path, help="override platform DTSGen.py path")
     parser.add_argument("--harts", type=int)
@@ -172,6 +183,8 @@ def command_doctor(ctx: BuildContext) -> None:
 
     if not ctx.app_dir().exists():
         missing.append(str(ctx.app_dir()))
+    if ctx.selected_workload() == "any":
+        load_any_config(ctx)
     for path in ctx.platform_workflow.doctor(ctx):
         missing.append(str(path))
 
@@ -196,7 +209,12 @@ def command_print_plan(ctx: BuildContext) -> None:
     log(f"profile: {ctx.profile_name}")
     log(f"workload: {ctx.selected_workload()}")
     log(f"app source: {ctx.app_dir()}")
-    log(f"workload binary: {ctx.workload_binary()}")
+    if ctx.selected_workload() == "any":
+        log(f"any ELF: {ctx.args.any_elf}")
+        for mapping in ctx.args.any_file:
+            log(f"any file: {mapping}")
+    else:
+        log(f"workload binary: {ctx.workload_binary()}")
     log(f"initramfs list: {ctx.initramfs_list()}")
     dtb_mode = ctx.platform_config.get("dtb", {}).get("mode") if isinstance(ctx.platform_config.get("dtb"), dict) else None
     if ctx.args.dts_generator or ctx.platform_config.get("dts_generator"):

@@ -14,10 +14,20 @@ def c_string(value: str) -> str:
     return json.dumps(value, ensure_ascii=True)
 
 
-def generate(executable: str, arguments: list[str]) -> str:
+def generate(
+    executable: str,
+    arguments: list[str],
+    stdin_path: str,
+    stdout_path: str,
+    stderr_path: str,
+) -> str:
     argv = [executable, *arguments]
     lines = [
         "#include <stddef.h>",
+        "",
+        f"const char spec_stdin[] = {c_string(stdin_path)};",
+        f"const char spec_stdout[] = {c_string(stdout_path)};",
+        f"const char spec_stderr[] = {c_string(stderr_path)};",
         "",
     ]
     for index, argument in enumerate(argv):
@@ -41,7 +51,16 @@ def main() -> int:
 
     arguments = shlex.split(os.environ.get("SPEC_ARGS", ""))
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(generate(args.executable, arguments), encoding="utf-8")
+    args.output.write_text(
+        generate(
+            args.executable,
+            arguments,
+            os.environ.get("SPEC_STDIN", ""),
+            os.environ.get("SPEC_STDOUT", ""),
+            os.environ.get("SPEC_STDERR", ""),
+        ),
+        encoding="utf-8",
+    )
     return 0
 
 

@@ -39,19 +39,5 @@
     "timebase_frequency": 10000000,
     "mmu_type": "riscv,sv48",
     "rva_profile": "rva23s64"
-  },
-  "profiles": {
-    "hello": {
-      "workload": "hello",
-      "harts": 1
-    },
-    "gemm": {
-      "workload": "gemm",
-      "harts": 1
-    },
-    "coremark": {
-      "workload": "coremark",
-      "harts": 1
-    }
   }
 }

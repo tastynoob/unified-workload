@@ -21,19 +21,5 @@
     "qemu_machine": "mini-virt",
     "qemu_cpu": "cortex-a57",
     "qemu_memory": "1024M"
-  },
-  "profiles": {
-    "hello": {
-      "workload": "hello",
-      "harts": 1
-    },
-    "gemm": {
-      "workload": "gemm",
-      "harts": 1
-    },
-    "coremark": {
-      "workload": "coremark",
-      "harts": 1
-    }
   }
 }

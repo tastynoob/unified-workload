@@ -24,7 +24,7 @@ BENCHMARKS = {
         flags="-DPERL_CORE -DSPEC_CPU_LINUX_X64 -std=gnu89", libs="-lm"
     ),
     "401.bzip2": BuildMetadata(),
-    "403.gcc": BuildMetadata(flags="-I./src -std=c11"),
+    "403.gcc": BuildMetadata(flags="-I. -std=c11"),
     "410.bwaves": BuildMetadata(),
     "416.gamess": BuildMetadata(
         fflags="-std=legacy -funconstrained-commons -fno-strict-aliasing",
@@ -48,7 +48,7 @@ BENCHMARKS = {
     "437.leslie3d": BuildMetadata(),
     "444.namd": BuildMetadata(flags="-std=c++98", libs="-lm"),
     "445.gobmk": BuildMetadata(
-        flags="-DHAVE_CONFIG_H -I./src/include", libs="-lm"
+        flags="-DHAVE_CONFIG_H -I./include", libs="-lm"
     ),
     "447.dealII": BuildMetadata(
         flags=(
@@ -76,7 +76,7 @@ BENCHMARKS = {
     ),
     "470.lbm": BuildMetadata(libs="-lm"),
     "471.omnetpp": BuildMetadata(
-        flags="-I./src -I./src/omnet_include -I./src/libs/envir", libs="-lm"
+        flags="-I. -I./omnet_include -I./libs/envir", libs="-lm"
     ),
     "473.astar": BuildMetadata(
         flags="-DSPEC_CPU_LITTLE_ENDIAN -std=c++98", libs="-lm"
@@ -105,10 +105,10 @@ BENCHMARKS = {
     ),
     "483.xalancbmk": BuildMetadata(
         flags=(
-            "-I./src -I./src/xercesc -I./src/xercesc/dom "
-            "-I./src/xercesc/dom/impl -I./src/xercesc/sax "
-            "-I./src/xercesc/util/MsgLoaders/InMemory "
-            "-I./src/xercesc/util/Transcoders/Iconv -I./src/xalanc/include "
+            "-I. -I./xercesc -I./xercesc/dom "
+            "-I./xercesc/dom/impl -I./xercesc/sax "
+            "-I./xercesc/util/MsgLoaders/InMemory "
+            "-I./xercesc/util/Transcoders/Iconv -I./xalanc/include "
             "-DPROJ_XMLPARSER -DPROJ_XMLUTIL -DPROJ_PARSERS -DPROJ_SAX4C "
             "-DPROJ_SAX2 -DPROJ_DOM -DPROJ_VALIDATORS "
             "-DXML_USE_NATIVE_TRANSCODER -DXML_USE_INMEM_MESSAGELOADER "
@@ -269,7 +269,7 @@ def expand_source_patterns(source_dir: Path, sources: list[str]) -> list[str]:
         if not matches:
             raise ValueError(f"source pattern does not match any files: {source}")
         expanded.extend(matches)
-    return expanded
+    return list(dict.fromkeys(expanded))
 
 
 def resolve_source_metadata(
