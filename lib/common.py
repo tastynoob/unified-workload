@@ -44,6 +44,14 @@ def write_text(path: Path, content: str, dry_run: bool) -> None:
 
 
 def load_symbol(path: Path, symbol: str) -> Any:
+    module = load_module(path)
+    value = getattr(module, symbol, None)
+    if value is None:
+        raise BuildError(f"Module {path} has no symbol {symbol}")
+    return value
+
+
+def load_module(path: Path) -> Any:
     if not path.exists():
         raise BuildError(f"Module does not exist: {path}")
 
@@ -54,7 +62,4 @@ def load_symbol(path: Path, symbol: str) -> Any:
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
-    value = getattr(module, symbol, None)
-    if value is None:
-        raise BuildError(f"Module {path} has no symbol {symbol}")
-    return value
+    return module

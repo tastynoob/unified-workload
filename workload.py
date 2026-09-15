@@ -4,22 +4,22 @@
 from __future__ import annotations
 
 import argparse
+import os
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 from typing import Iterable, Optional
 
-from lib.any_app import load_config as load_any_config
-from lib.apps import build_workload
-from lib.common import BuildError, load_json, load_symbol, log
+from lib.apps import build_workload, validate_workload, workload_doctor
+from lib.common import BuildError, load_json, log
 from lib.context import (
-    DEFAULT_ARCH,
     DEFAULT_PLATFORM,
     DEFAULT_PROFILE,
     BuildContext,
     SCRIPT_DIR,
 )
+from lib.platform import load_platform, parse_options
 from lib.resources import (
     fetch_resource,
     resource_names,
@@ -59,8 +59,6 @@ def make_parser() -> argparse.ArgumentParser:
         ],
     )
     parser.add_argument("resources", nargs="*", help="resource names for fetch")
-    parser.add_argument("--config", type=Path, help="override arch resource config")
-    parser.add_argument("--arch", default=DEFAULT_ARCH, help="architecture profile under unified-workload/arch")
     parser.add_argument("--platform", default=DEFAULT_PLATFORM, help="platform profile under unified-workload/plat")
     parser.add_argument("--profile", default=DEFAULT_PROFILE)
     parser.add_argument("--external-dir", type=Path, default=SCRIPT_DIR / "external")
@@ -76,39 +74,15 @@ def make_parser() -> argparse.ArgumentParser:
     parser.add_argument("--cflags", action="append", default=[], help="extra workload CFLAGS")
     parser.add_argument("--ldflags", action="append", default=[], help="extra workload LDFLAGS")
     parser.add_argument(
-        "--any-elf", type=Path, help="external ELF used by the any workload"
+        "--platform-option", action="append", default=[], metavar="KEY=VALUE",
+        help="platform-specific option; validated by the platform workflow",
     )
     parser.add_argument(
-        "--any-file",
-        action="append",
-        default=[],
-        metavar="HOST=GUEST",
-        help="file or directory mapped into the any initramfs",
+        "--workload-option", action="append", default=[], metavar="KEY=VALUE",
+        help="workload-specific option; interpreted by the selected workload",
     )
-    parser.add_argument("--device", dest="platform", help=argparse.SUPPRESS)
-    parser.add_argument("--dts-generator", type=Path, help="override platform DTSGen.py path")
-    parser.add_argument("--harts", type=int)
-    parser.add_argument("--linux-defconfig", type=Path)
-    parser.add_argument("--opensbi-platform")
-    parser.add_argument("--bootargs")
-    parser.add_argument("--memory-base")
-    parser.add_argument("--memory-size")
-    parser.add_argument("--serial-addr")
-    parser.add_argument("--sd-addr")
-    parser.add_argument("--timebase-frequency", type=int)
-    parser.add_argument("--mmu-type")
-    parser.add_argument("--rva-profile")
-    parser.add_argument("--isa-extension", action="append", default=[], help="extra ISA extension for DTS")
     parser.add_argument("--dry-run", action="store_true")
     return parser
-
-
-def default_arch_config_path(args: argparse.Namespace) -> Path:
-    return SCRIPT_DIR / "arch" / args.arch / "resources.json"
-
-
-def platform_config_path(args: argparse.Namespace) -> Path:
-    return SCRIPT_DIR / "plat" / args.platform / "platform.json"
 
 
 def platform_workflow_path(args: argparse.Namespace) -> Path:
@@ -116,10 +90,11 @@ def platform_workflow_path(args: argparse.Namespace) -> Path:
 
 
 def normalize_args(args: argparse.Namespace) -> None:
-    args.config = (args.config or default_arch_config_path(args)).resolve()
     args.external_dir = args.external_dir.resolve()
     args.cache_dir = args.cache_dir.resolve()
     args.build_dir = args.build_dir.resolve()
+    args.platform_options = parse_options(args.platform_option, "--platform-option")
+    args.workload_options = parse_options(args.workload_option, "--workload-option")
     if args.command in CROSS_COMPILE_REQUIRED_COMMANDS and not args.cross_compile:
         raise BuildError(f"{args.command} requires --cross-compile")
     args.jobs = args.jobs if args.jobs is not None else (os_cpu_count())
@@ -132,28 +107,32 @@ def os_cpu_count() -> int:
 
 
 def make_context(args: argparse.Namespace) -> BuildContext:
-    platform_cfg_path = platform_config_path(args)
-    if not platform_cfg_path.exists():
-        raise BuildError(f"Platform config does not exist: {platform_cfg_path}")
-
-    resource_config = load_json(args.config)
+    platform_config, workflow_module, platform_cfg_path = load_platform(
+        SCRIPT_DIR, args.platform
+    )
+    arch = str(platform_config.get("arch", ""))
+    if not arch:
+        raise BuildError(f"Platform config has no arch: {platform_cfg_path}")
+    resource_config = load_json(SCRIPT_DIR / "arch" / arch / "resources.json")
     if "resources" not in resource_config or not isinstance(resource_config["resources"], dict):
-        raise BuildError(f"Invalid resource config: {args.config}")
+        raise BuildError(f"Invalid resource config: {SCRIPT_DIR / 'arch' / arch / 'resources.json'}")
 
-    platform_config = load_json(platform_cfg_path)
     platform_resources = platform_config.get("resources", {})
     if platform_resources and not isinstance(platform_resources, dict):
         raise BuildError(f"Invalid platform resources config: {platform_cfg_path}")
-    platform_arch = platform_config.get("arch")
-    if platform_arch and platform_arch != args.arch:
-        raise BuildError(f"Platform {args.platform} requires arch '{platform_arch}', got '{args.arch}'")
-
-    workflow = load_symbol(platform_workflow_path(args), "build_firmware")
-    workflow_module = sys.modules.get(workflow.__module__)
-    if workflow_module is None:
-        raise BuildError(f"Cannot load platform workflow: {platform_workflow_path(args)}")
-
-    return BuildContext(args, resource_config, platform_config, workflow_module)
+    ctx = BuildContext(
+        args,
+        resource_config,
+        platform_config,
+        workflow_module,
+        args.platform_options,
+        args.workload_options,
+    )
+    validate_options = getattr(workflow_module, "validate_options", None)
+    if validate_options is not None:
+        validate_options(ctx)
+    validate_workload(ctx)
+    return ctx
 
 
 def command_doctor(ctx: BuildContext) -> None:
@@ -175,7 +154,7 @@ def command_doctor(ctx: BuildContext) -> None:
         resource_status = str(path) if path.exists() else "missing"
         log(f"resource {name}: {resource_status}")
 
-    log(f"arch {ctx.arch}: resources={ctx.args.config}")
+    log(f"arch {ctx.arch}: resources={ctx.arch_resource_config_path()}")
     log(f"platform {ctx.platform}: config={ctx.platform_config_path()}")
     log(f"platform {ctx.platform}: workflow={platform_workflow_path(ctx.args)}")
     log(f"platform {ctx.platform}: firmware={ctx.firmware}")
@@ -183,8 +162,7 @@ def command_doctor(ctx: BuildContext) -> None:
 
     if not ctx.app_dir().exists():
         missing.append(str(ctx.app_dir()))
-    if ctx.selected_workload() == "any":
-        load_any_config(ctx)
+    workload_doctor(ctx)
     for path in ctx.platform_workflow.doctor(ctx):
         missing.append(str(path))
 
@@ -202,22 +180,18 @@ def command_print_plan(ctx: BuildContext) -> None:
     log(f"arch: {ctx.arch}")
     log(f"linux arch: {ctx.linux_arch}")
     log(f"platform: {ctx.platform}")
-    log(f"resource config: {ctx.args.config}")
+    log(f"resource config: {ctx.arch_resource_config_path()}")
     log(f"platform config: {ctx.platform_config_path()}")
     log(f"platform workflow: {platform_workflow_path(ctx.args)}")
     log(f"firmware: {ctx.firmware}")
     log(f"profile: {ctx.profile_name}")
     log(f"workload: {ctx.selected_workload()}")
     log(f"app source: {ctx.app_dir()}")
-    if ctx.selected_workload() == "any":
-        log(f"any ELF: {ctx.args.any_elf}")
-        for mapping in ctx.args.any_file:
-            log(f"any file: {mapping}")
-    else:
-        log(f"workload binary: {ctx.workload_binary()}")
+    log(f"workload options: {ctx.workload_options}")
+    log(f"workload binary: {ctx.workload_binary()}")
     log(f"initramfs list: {ctx.initramfs_list()}")
     dtb_mode = ctx.platform_config.get("dtb", {}).get("mode") if isinstance(ctx.platform_config.get("dtb"), dict) else None
-    if ctx.args.dts_generator or ctx.platform_config.get("dts_generator"):
+    if "dts_generator" in ctx.platform_options or ctx.platform_config.get("dts_generator"):
         log(f"dts generator: {ctx.dts_generator_path()}")
         log(f"dts: {ctx.dts_path()}")
         log(f"dtb: {ctx.dtb_path()}")

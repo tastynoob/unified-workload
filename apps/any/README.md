@@ -29,22 +29,21 @@ $TARGET_CC -static -o benchmark \
 
 | 参数 | 含义 |
 | --- | --- |
-| `--any-elf PATH` | 必填，安装为 `/init` 的目标架构 Linux ELF |
-| `--any-file HOST=GUEST` | 文件或目录映射，可重复；guest 路径必须为绝对路径 |
+| `--workload-option elf=PATH` | 必填，安装为 `/init` 的目标架构 Linux ELF |
+| `--workload-option file=HOST=GUEST` | 文件或目录映射，可重复；guest 路径必须为绝对路径 |
 
 目录映射会递归保留普通文件、目录和相对符号链接。动态 ELF 所需的解释器和共享库
-也必须通过 `--any-file` 显式打包；用于仿真 workload 时优先使用静态 ELF。
+也必须通过 `--workload-option file=HOST=GUEST` 显式打包；用于仿真 workload 时优先使用静态 ELF。
 
 例如：
 
 ```sh
 python3 workload.py all \
-  --arch aarch64 \
   --platform qemu-minivirt-aarch64-gcpt \
   --profile any \
   --cross-compile /path/to/aarch64-linux-gnu- \
-  --any-elf /path/to/benchmark \
-  --any-file /path/to/input.dat=/input.dat
+  --workload-option elf=/path/to/benchmark \
+  --workload-option file=/path/to/input.dat=/input.dat
 ```
 
 对同一平台持续使用相同的 `--build-dir` 和 `--profile any`，Linux、OpenSBI 和其他

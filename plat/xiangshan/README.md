@@ -52,7 +52,7 @@ arch/riscv/resources.json
 下载资源：
 
 ```sh
-python3 workload.py fetch --arch riscv --platform xiangshan
+python3 workload.py fetch --platform xiangshan
 ```
 
 资源默认放在：
@@ -76,7 +76,6 @@ ln -s /path/to/opensbi external/riscv/opensbi
 
 ```sh
 python3 workload.py doctor \
-  --arch riscv \
   --platform xiangshan \
   --cross-compile "$RISCV_CROSS"
 ```
@@ -85,7 +84,6 @@ python3 workload.py doctor \
 
 ```sh
 python3 workload.py print-plan \
-  --arch riscv \
   --platform xiangshan \
   --cross-compile "$RISCV_CROSS"
 ```
@@ -94,7 +92,6 @@ python3 workload.py print-plan \
 
 ```sh
 python3 workload.py all \
-  --arch riscv \
   --platform xiangshan \
   --cross-compile "$RISCV_CROSS"
 ```
@@ -102,10 +99,10 @@ python3 workload.py all \
 分步构建：
 
 ```sh
-python3 workload.py build-workload --arch riscv --platform xiangshan --cross-compile "$RISCV_CROSS"
-python3 workload.py build-dtb      --arch riscv --platform xiangshan
-python3 workload.py build-kernel   --arch riscv --platform xiangshan --cross-compile "$RISCV_CROSS"
-python3 workload.py build-opensbi  --arch riscv --platform xiangshan --cross-compile "$RISCV_CROSS"
+python3 workload.py build-workload --platform xiangshan --cross-compile "$RISCV_CROSS"
+python3 workload.py build-dtb      --platform xiangshan
+python3 workload.py build-kernel   --platform xiangshan --cross-compile "$RISCV_CROSS"
+python3 workload.py build-opensbi  --platform xiangshan --cross-compile "$RISCV_CROSS"
 ```
 
 `build-opensbi` 是 `build-firmware` 在该平台上的兼容别名。
@@ -128,15 +125,16 @@ build/plat/xiangshan/hello/opensbi/platform/generic/firmware/fw_payload.bin
 常用覆盖参数：
 
 ```sh
---harts 4
---bootargs "console=hvc0 earlycon=sbi"
---memory-base 0x80000000
---memory-size 0x200000000
---serial-addr 0x40600000
---sd-addr 0x40002000
---timebase-frequency 10000000
---mmu-type riscv,sv48
---rva-profile rva23s64
+--platform-option harts=4
+--platform-option bootargs="console=hvc0 earlycon=sbi"
+--platform-option memory_base=0x80000000
+--platform-option memory_size=0x200000000
+--platform-option serial_addr=0x40600000
+--platform-option sd_addr=0x40002000
+--platform-option timebase_frequency=10000000
+--platform-option mmu_type=riscv,sv48
+--platform-option rva_profile=rva23s64
+--platform-option isa_extension=v
 ```
 
 默认值见：

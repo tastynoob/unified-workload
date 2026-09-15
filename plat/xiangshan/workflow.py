@@ -3,10 +3,10 @@ from __future__ import annotations
 from pathlib import Path
 
 from arch.riscv.firmware import opensbi
-from lib.common import BuildError, load_symbol, write_text
+from lib.common import BuildError, load_symbol, run, write_text
 from lib.context import BuildContext
 from lib.linux import build_kernel as build_linux_kernel
-from lib.common import run
+from lib.platform import validate_option_keys
 
 
 def _to_int(value: str | int | None) -> int | None:
@@ -14,7 +14,41 @@ def _to_int(value: str | int | None) -> int | None:
         return None
     if isinstance(value, int):
         return value
-    return int(value, 0)
+    try:
+        return int(value, 0)
+    except ValueError as exc:
+        raise BuildError("platform address/size option must be an integer") from exc
+
+
+def validate_options(ctx: BuildContext) -> None:
+    validate_option_keys(
+        ctx.platform_options,
+        {
+            "harts",
+            "bootargs",
+            "memory_base",
+            "memory_size",
+            "serial_addr",
+            "sd_addr",
+            "timebase_frequency",
+            "mmu_type",
+            "rva_profile",
+            "isa_extension",
+            "linux_defconfig",
+            "dts_generator",
+            "opensbi_platform",
+        },
+        repeatable={"isa_extension"},
+    )
+    ctx.harts()
+    for value in (
+        ctx.memory_base(),
+        ctx.memory_size(),
+        ctx.serial_addr(),
+        ctx.sd_addr(),
+    ):
+        _to_int(value)
+    ctx.timebase_frequency()
 
 
 def _dtsgen_class(ctx: BuildContext):
@@ -46,7 +80,7 @@ def _reserved_memories(ctx: BuildContext) -> list[dict]:
 
 def generate_dts(ctx: BuildContext) -> str:
     dtsgen_cls = _dtsgen_class(ctx)
-    isa_extensions = set(ctx.args.isa_extension)
+    isa_extensions = set(ctx.platform_option_values("isa_extension"))
     rva_profile = ctx.rva_profile()
     if rva_profile:
         isa_extensions.update(dtsgen_cls.get_isa_extensions_by_rva_profile(rva_profile))

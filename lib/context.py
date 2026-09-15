@@ -9,7 +9,6 @@ from lib.common import BuildError
 
 
 SCRIPT_DIR = Path(__file__).resolve().parents[1]
-DEFAULT_ARCH = "riscv"
 DEFAULT_PLATFORM = "xiangshan"
 DEFAULT_PROFILE = "hello"
 
@@ -20,6 +19,8 @@ class BuildContext:
     resource_config: Mapping[str, Any]
     platform_config: Mapping[str, Any]
     platform_workflow: Any
+    platform_options: Mapping[str, list[str]]
+    workload_options: Mapping[str, list[str]]
 
     @property
     def root_dir(self) -> Path:
@@ -27,7 +28,7 @@ class BuildContext:
 
     @property
     def arch(self) -> str:
-        return self.args.arch
+        return str(self.platform_config["arch"])
 
     @property
     def platform(self) -> str:
@@ -47,13 +48,28 @@ class BuildContext:
 
     @property
     def opensbi_platform(self) -> str:
-        if self.args.opensbi_platform:
-            return self.args.opensbi_platform
+        value = self.platform_option("opensbi_platform")
+        if value is not None:
+            return value
         opensbi = self.platform_config.get("opensbi", {})
         return str(opensbi.get("platform", "generic"))
 
     def default(self, name: str, fallback: Any = None) -> Any:
         return self.platform_config.get("defaults", {}).get(name, fallback)
+
+    def platform_option(self, name: str, fallback: Any = None) -> Any:
+        values = self.platform_options.get(name)
+        return values[-1] if values else fallback
+
+    def platform_option_values(self, name: str) -> list[str]:
+        return list(self.platform_options.get(name, []))
+
+    def workload_option(self, name: str, fallback: Any = None) -> Any:
+        values = self.workload_options.get(name)
+        return values[-1] if values else fallback
+
+    def workload_option_values(self, name: str) -> list[str]:
+        return list(self.workload_options.get(name, []))
 
     def build_env(self) -> dict[str, str]:
         env = os.environ.copy()
@@ -106,14 +122,16 @@ class BuildContext:
         return self.profile_build_dir() / "dtb" / f"{self.platform}.dts"
 
     def linux_defconfig(self) -> Path:
-        if self.args.linux_defconfig is not None:
-            return self.args.linux_defconfig.resolve()
+        value = self.platform_option("linux_defconfig")
+        if value is not None:
+            return Path(value).expanduser().resolve()
         value = self.platform_config.get("linux_defconfig", "configs/linux_defconfig")
         return (self.platform_dir() / value).resolve()
 
     def dts_generator_path(self) -> Path:
-        if self.args.dts_generator is not None:
-            return self.args.dts_generator.resolve()
+        value = self.platform_option("dts_generator")
+        if value is not None:
+            return Path(value).expanduser().resolve()
         value = self.platform_config.get("dts_generator", "dts/DTSGen.py")
         return (self.platform_dir() / value).resolve()
 
@@ -128,34 +146,55 @@ class BuildContext:
         )
 
     def harts(self) -> int:
-        value = self.args.harts
-        if value is None:
-            value = self.default("harts", 1)
-        value = int(value)
+        value = self.platform_option("harts", self.default("harts", 1))
+        try:
+            value = int(value)
+        except (TypeError, ValueError) as exc:
+            raise BuildError("platform option harts must be an integer") from exc
         if value < 1:
-            raise BuildError("--harts must be >= 1")
+            raise BuildError("platform option harts must be >= 1")
         return value
 
     def bootargs(self) -> str:
-        return self.args.bootargs or str(self.default("bootargs", "console=hvc0 earlycon=sbi"))
+        return self.platform_option(
+            "bootargs", str(self.default("bootargs", "console=hvc0 earlycon=sbi"))
+        )
 
     def memory_base(self) -> str:
-        return self.args.memory_base or str(self.default("memory_base", "0x80000000"))
+        return self.platform_option(
+            "memory_base", str(self.default("memory_base", "0x80000000"))
+        )
 
     def memory_size(self) -> str:
-        return self.args.memory_size or str(self.default("memory_size", "0x200000000"))
+        return self.platform_option(
+            "memory_size", str(self.default("memory_size", "0x200000000"))
+        )
 
     def serial_addr(self) -> Optional[str]:
-        return self.args.serial_addr if self.args.serial_addr is not None else self.default("serial_addr", "0x40600000")
+        return self.platform_option(
+            "serial_addr", self.default("serial_addr", "0x40600000")
+        )
 
     def sd_addr(self) -> Optional[str]:
-        return self.args.sd_addr if self.args.sd_addr is not None else self.default("sd_addr", "0x40002000")
+        return self.platform_option(
+            "sd_addr", self.default("sd_addr", "0x40002000")
+        )
 
     def timebase_frequency(self) -> int:
-        return int(self.args.timebase_frequency or self.default("timebase_frequency", 10000000))
+        value = self.platform_option(
+            "timebase_frequency", self.default("timebase_frequency", 10000000)
+        )
+        try:
+            return int(value)
+        except (TypeError, ValueError) as exc:
+            raise BuildError(
+                "platform option timebase_frequency must be an integer"
+            ) from exc
 
     def mmu_type(self) -> str:
-        return self.args.mmu_type or str(self.default("mmu_type", "riscv,sv48"))
+        return self.platform_option(
+            "mmu_type", str(self.default("mmu_type", "riscv,sv48"))
+        )
 
     def rva_profile(self) -> Optional[str]:
-        return self.args.rva_profile if self.args.rva_profile is not None else self.default("rva_profile", "rva23s64")
+        return self.platform_option("rva_profile", self.default("rva_profile", "rva23s64"))

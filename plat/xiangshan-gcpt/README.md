@@ -81,7 +81,6 @@ plat/xiangshan-gcpt/platform.json
 
 ```sh
 python3 workload.py fetch \
-  --arch riscv \
   --platform xiangshan-gcpt
 ```
 
@@ -110,7 +109,6 @@ LibCheckpoint 需要初始化 submodule；使用 `fetch` 下载时会自动执�
 
 ```sh
 python3 workload.py doctor \
-  --arch riscv \
   --platform xiangshan-gcpt \
   --cross-compile "$RISCV_CROSS"
 ```
@@ -119,7 +117,6 @@ python3 workload.py doctor \
 
 ```sh
 python3 workload.py print-plan \
-  --arch riscv \
   --platform xiangshan-gcpt \
   --cross-compile "$RISCV_CROSS"
 ```
@@ -128,7 +125,6 @@ python3 workload.py print-plan \
 
 ```sh
 python3 workload.py all \
-  --arch riscv \
   --platform xiangshan-gcpt \
   --cross-compile "$RISCV_CROSS"
 ```
@@ -136,10 +132,10 @@ python3 workload.py all \
 分步构建：
 
 ```sh
-python3 workload.py build-workload --arch riscv --platform xiangshan-gcpt --cross-compile "$RISCV_CROSS"
-python3 workload.py build-dtb      --arch riscv --platform xiangshan-gcpt
-python3 workload.py build-kernel   --arch riscv --platform xiangshan-gcpt --cross-compile "$RISCV_CROSS"
-python3 workload.py build-gcpt     --arch riscv --platform xiangshan-gcpt --cross-compile "$RISCV_CROSS"
+python3 workload.py build-workload --platform xiangshan-gcpt --cross-compile "$RISCV_CROSS"
+python3 workload.py build-dtb      --platform xiangshan-gcpt
+python3 workload.py build-kernel   --platform xiangshan-gcpt --cross-compile "$RISCV_CROSS"
+python3 workload.py build-gcpt     --platform xiangshan-gcpt --cross-compile "$RISCV_CROSS"
 ```
 
 `build-gcpt` 是 `build-firmware` 在该平台上的兼容别名，会先生成 OpenSBI `fw_payload.bin`，再把它嵌入 `gcpt.bin`。

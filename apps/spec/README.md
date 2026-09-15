@@ -75,7 +75,6 @@ SPEC_ARGS='inp.in 1' \
 SPEC_OPTIMIZE='-mcpu=neoverse-n1 -Ofast -fomit-frame-pointer -g1 -flto' \
 SPEC_EXTRA_LDFLAGS='-flto' \
 python3 workload.py build-workload \
-  --arch aarch64 \
   --platform qemu-minivirt-aarch64-gcpt \
   --profile spec \
   --cross-compile /path/to/aarch64-none-linux-gnu-
@@ -85,7 +84,6 @@ python3 workload.py build-workload \
 
 ```sh
 python3 workload.py all \
-  --arch aarch64 \
   --platform qemu-minivirt-aarch64-gcpt \
   --profile spec \
   --cross-compile /path/to/aarch64-none-linux-gnu-

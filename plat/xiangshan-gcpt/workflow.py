@@ -11,6 +11,10 @@ def _xiangshan_symbol(ctx: BuildContext, name: str):
     return load_symbol(ctx.root_dir / "plat" / "xiangshan" / "workflow.py", name)
 
 
+def validate_options(ctx: BuildContext) -> None:
+    _xiangshan_symbol(ctx, "validate_options")(ctx)
+
+
 def doctor(ctx: BuildContext) -> list[Path]:
     return _xiangshan_symbol(ctx, "doctor")(ctx)
 

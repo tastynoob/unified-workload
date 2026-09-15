@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-import os
+import json
 from pathlib import Path
 
-from lib import any_app
-from lib.common import BuildError, run, write_text
+from lib.common import BuildError, load_module, run, write_text
 from lib.context import BuildContext
 from lib.toolchain import cross_gcc
 
@@ -15,52 +14,30 @@ def discover_c_sources(path: Path) -> list[Path]:
     return sorted(path.glob("*.c"))
 
 
-def _spec_cross_compile(ctx: BuildContext) -> str:
-    if ctx.selected_workload() == "spec":
-        return os.environ.get("SPEC_CROSS_COMPILE", ctx.args.cross_compile)
-    return ctx.args.cross_compile
+def _workload_workflow(ctx: BuildContext):
+    path = ctx.app_dir() / "workflow.py"
+    return load_module(path) if path.is_file() else None
 
 
-def _spec_input_manifest(ctx: BuildContext) -> str:
-    if ctx.selected_workload() != "spec":
-        return ""
+def workload_doctor(ctx: BuildContext) -> None:
+    workflow = _workload_workflow(ctx)
+    doctor = getattr(workflow, "doctor", None) if workflow else None
+    if doctor is not None:
+        doctor(ctx)
 
-    benchmark = os.environ.get("SPEC_BENCHMARK", "401.bzip2")
-    configured_work_dir = os.environ.get("SPEC_WORK_DIR")
-    if configured_work_dir:
-        input_dir = Path(configured_work_dir).expanduser().resolve() / "inputs"
-    else:
-        input_dir = (
-            ctx.profile_build_dir()
-            / "workload"
-            / "obj"
-            / "spec"
-            / benchmark
-            / "inputs"
-        )
-    if not input_dir.is_dir():
-        return ""
 
-    files = sorted(path for path in input_dir.rglob("*") if path.is_file())
-    directories: set[Path] = set()
-    for path in files:
-        relative = path.relative_to(input_dir)
-        directories.update(parent for parent in relative.parents if parent != Path("."))
-    directory_lines = [
-        f"dir /{relative.as_posix()} 755 0 0"
-        for relative in sorted(directories, key=lambda path: (len(path.parts), path.as_posix()))
-    ]
-    file_lines = [
-        f"file /{path.relative_to(input_dir).as_posix()} {path.resolve()} 644 0 0"
-        for path in files
-    ]
-    lines = directory_lines + file_lines
-    return "\n".join(lines)
+def validate_workload(ctx: BuildContext) -> None:
+    workflow = _workload_workflow(ctx)
+    validate = getattr(workflow, "validate_options", None) if workflow else None
+    if validate is not None:
+        validate(ctx)
 
 
 def build_workload(ctx: BuildContext) -> Path:
-    if ctx.selected_workload() == "any":
-        return any_app.build(ctx)
+    workflow = _workload_workflow(ctx)
+    custom_build = getattr(workflow, "build_workload", None) if workflow else None
+    if custom_build is not None:
+        return custom_build(ctx)
 
     source_dir = ctx.app_dir()
     sources = discover_c_sources(source_dir)
@@ -73,13 +50,19 @@ def build_workload(ctx: BuildContext) -> Path:
     if makefile is not None and makefile.exists():
         make_env = ctx.build_env()
         make_env["UNIFIED_WORKLOAD_HOME"] = str(ctx.root_dir)
-        cross_compile = _spec_cross_compile(ctx)
+        make_env["UNIFIED_WORKLOAD_OPTIONS"] = json.dumps(
+            ctx.workload_options, sort_keys=True, separators=(",", ":")
+        )
+        configure_build_env = (
+            getattr(workflow, "configure_build_env", None) if workflow else None
+        )
+        if configure_build_env is not None:
+            configure_build_env(ctx, make_env)
         run(
             [
                 "make",
                 "-C",
                 str(source_dir),
-                f"CROSS_COMPILE={cross_compile}",
                 f"PLATFORM={ctx.platform}",
                 f"APP={binary}",
                 f"DST_DIR={ctx.profile_build_dir() / 'workload' / 'obj'}",
@@ -118,8 +101,12 @@ nod /dev/null 644 0 0 c 1 3
 
 file /init {binary.resolve()} 755 0 0
 """
-    spec_inputs = _spec_input_manifest(ctx)
-    if spec_inputs:
-        manifest += "\n" + spec_inputs + "\n"
+    initramfs_entries = (
+        getattr(workflow, "initramfs_entries", None) if workflow else None
+    )
+    if initramfs_entries is not None:
+        extra_entries = initramfs_entries(ctx)
+        if extra_entries:
+            manifest += "\n" + extra_entries + "\n"
     write_text(initramfs, manifest, ctx.args.dry_run)
     return initramfs

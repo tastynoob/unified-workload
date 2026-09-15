@@ -7,6 +7,7 @@ from arch.aarch64.firmware import payload as aarch64_payload
 from lib.common import BuildError, run, write_text
 from lib.context import BuildContext
 from lib.linux import build_kernel as build_linux_kernel
+from lib.platform import validate_option_keys
 
 
 def _to_int(value: str | int | None, fallback: int) -> int:
@@ -14,7 +15,30 @@ def _to_int(value: str | int | None, fallback: int) -> int:
         return fallback
     if isinstance(value, int):
         return value
-    return int(value, 0)
+    try:
+        return int(value, 0)
+    except ValueError as exc:
+        raise BuildError("platform memory address/size must be an integer") from exc
+
+
+def validate_options(ctx: BuildContext) -> None:
+    validate_option_keys(
+        ctx.platform_options,
+        {
+            "harts",
+            "bootargs",
+            "memory_base",
+            "memory_size",
+            "qemu_binary",
+            "qemu_machine",
+            "qemu_cpu",
+            "qemu_memory",
+            "linux_defconfig",
+        },
+    )
+    ctx.harts()
+    _to_int(ctx.memory_base(), 0x40000000)
+    _to_int(ctx.memory_size(), 0x40000000)
 
 
 def _reserved_memory_dts(ctx: BuildContext) -> str:
@@ -53,7 +77,9 @@ def doctor(ctx: BuildContext) -> list[Path]:
 
 
 def doctor_tools(ctx: BuildContext) -> list[str]:
-    qemu = os.environ.get("QEMU_SYSTEM_AARCH64") or str(ctx.default("qemu_binary", "qemu-system-aarch64"))
+    qemu = os.environ.get("QEMU_SYSTEM_AARCH64") or str(
+        ctx.platform_option("qemu_binary", ctx.default("qemu_binary", "qemu-system-aarch64"))
+    )
     return ["dtc", qemu]
 
 
@@ -154,10 +180,16 @@ def _qemu_run_script(ctx: BuildContext) -> Path:
 
 def _write_qemu_run_script(ctx: BuildContext, payload: Path) -> Path:
     script = _qemu_run_script(ctx)
-    qemu = str(ctx.default("qemu_binary", "qemu-system-aarch64"))
-    machine = str(ctx.default("qemu_machine", "mini-virt"))
-    cpu = str(ctx.default("qemu_cpu", "cortex-a57"))
-    memory = str(ctx.default("qemu_memory", "1024M"))
+    qemu = str(
+        ctx.platform_option("qemu_binary", ctx.default("qemu_binary", "qemu-system-aarch64"))
+    )
+    machine = str(
+        ctx.platform_option("qemu_machine", ctx.default("qemu_machine", "mini-virt"))
+    )
+    cpu = str(ctx.platform_option("qemu_cpu", ctx.default("qemu_cpu", "cortex-a57")))
+    memory = str(
+        ctx.platform_option("qemu_memory", ctx.default("qemu_memory", "1024M"))
+    )
     content = f"""#!/usr/bin/env bash
 set -euo pipefail
 

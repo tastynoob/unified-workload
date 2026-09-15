@@ -11,6 +11,10 @@ def _base_symbol(ctx: BuildContext, name: str):
     return load_symbol(ctx.root_dir / "plat" / "qemu-minivirt-aarch64" / "workflow.py", name)
 
 
+def validate_options(ctx: BuildContext) -> None:
+    _base_symbol(ctx, "validate_options")(ctx)
+
+
 def doctor(ctx: BuildContext) -> list[Path]:
     return _base_symbol(ctx, "doctor")(ctx)
 
@@ -33,10 +37,16 @@ def _qemu_run_script(ctx: BuildContext) -> Path:
 
 def _write_qemu_run_script(ctx: BuildContext, image: Path) -> Path:
     script = _qemu_run_script(ctx)
-    qemu = str(ctx.default("qemu_binary", "qemu-system-aarch64"))
-    machine = str(ctx.default("qemu_machine", "mini-virt"))
-    cpu = str(ctx.default("qemu_cpu", "cortex-a57"))
-    memory = str(ctx.default("qemu_memory", "1024M"))
+    qemu = str(
+        ctx.platform_option("qemu_binary", ctx.default("qemu_binary", "qemu-system-aarch64"))
+    )
+    machine = str(
+        ctx.platform_option("qemu_machine", ctx.default("qemu_machine", "mini-virt"))
+    )
+    cpu = str(ctx.platform_option("qemu_cpu", ctx.default("qemu_cpu", "cortex-a57")))
+    memory = str(
+        ctx.platform_option("qemu_memory", ctx.default("qemu_memory", "1024M"))
+    )
     content = f"""#!/usr/bin/env bash
 set -euo pipefail
 

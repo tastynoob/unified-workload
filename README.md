@@ -52,12 +52,12 @@ git make tar bash python3
 
 ```sh
 python3 workload.py doctor \
-  --arch <arch> \
   --platform <platform> \
   --cross-compile /path/to/<target-triplet>-
 ```
 
 这里的 `--cross-compile` 是前缀，不包含 `gcc`。脚本会使用 `/path/to/<target-triplet>-gcc`。
+架构由所选平台的 `platform.json` 决定，用户不需要单独传入架构参数。
 
 宿主机是 x86 时，不能把宿主机上的 x86 动态库直接拷进目标 initramfs。默认 `apps/hello` 使用静态链接；真实 workload 也应该使用目标架构的 Linux 用户态工具链编译。
 
@@ -68,21 +68,20 @@ python3 workload.py doctor \
 下载资源：
 
 ```sh
-python3 workload.py fetch --arch <arch> --platform <platform>
+python3 workload.py fetch --platform <platform>
 ```
 
 如果本机已经有源码，直接软链接到对应 `external/<arch>/<dest>` 即可：
 
 ```sh
-mkdir -p external/<arch>
-ln -s /path/to/linux external/<arch>/linux
+mkdir -p external/<platform-arch>
+ln -s /path/to/linux external/<platform-arch>/linux
 ```
 
 检查工具、资源和平台配置：
 
 ```sh
 python3 workload.py doctor \
-  --arch <arch> \
   --platform <platform> \
   --cross-compile /path/to/<target-triplet>-
 ```
@@ -91,7 +90,6 @@ python3 workload.py doctor \
 
 ```sh
 python3 workload.py print-plan \
-  --arch <arch> \
   --platform <platform> \
   --cross-compile /path/to/<target-triplet>-
 ```
@@ -100,7 +98,6 @@ python3 workload.py print-plan \
 
 ```sh
 python3 workload.py all \
-  --arch <arch> \
   --platform <platform> \
   --cross-compile /path/to/<target-triplet>-
 ```
@@ -114,10 +111,10 @@ build-workload -> build-dtb -> build-kernel -> build-firmware
 分步构建：
 
 ```sh
-python3 workload.py build-workload --arch <arch> --platform <platform> --cross-compile /path/to/<target-triplet>-
-python3 workload.py build-dtb      --arch <arch> --platform <platform>
-python3 workload.py build-kernel   --arch <arch> --platform <platform> --cross-compile /path/to/<target-triplet>-
-python3 workload.py build-firmware --arch <arch> --platform <platform> --cross-compile /path/to/<target-triplet>-
+python3 workload.py build-workload --platform <platform> --cross-compile /path/to/<target-triplet>-
+python3 workload.py build-dtb      --platform <platform>
+python3 workload.py build-kernel   --platform <platform> --cross-compile /path/to/<target-triplet>-
+python3 workload.py build-firmware --platform <platform> --cross-compile /path/to/<target-triplet>-
 ```
 
 平台可以提供兼容别名。例如 RISC-V/XiangShan 使用 `build-opensbi`。
@@ -168,34 +165,42 @@ arch/<arch>/firmware/
 指定 profile：
 
 ```sh
-python3 workload.py all --arch <arch> --platform <platform> --profile hello --cross-compile /path/to/<target-triplet>-
+python3 workload.py all --platform <platform> --profile hello --cross-compile /path/to/<target-triplet>-
 ```
 
 profile 默认选择同名的 `apps/<profile>`，同时作为构建输出目录名。需要让输出目录名与
 app 名称不同时，再使用 `--workload <app>` 覆盖。
 
-指定 hart/CPU 数量：
+workload 的专用参数统一通过可重复的键值选项传入，由对应 workload 的 Makefile 或构建脚本
+解释；主入口不维护 benchmark 参数表：
 
 ```sh
-python3 workload.py all --arch <arch> --platform <platform> --harts 4 --cross-compile /path/to/<target-triplet>-
+python3 workload.py build-workload --platform <platform> --profile <workload> \
+  --workload-option key=value \
+  --cross-compile /path/to/<target-triplet>-
 ```
 
-覆盖 Linux bootargs：
+这些选项会同时以 `UNIFIED_WORKLOAD_OPTIONS` JSON 环境变量传给 workload 构建脚本。
+
+平台参数通过统一的键值选项传入，具体可用键由平台 workflow 校验：
 
 ```sh
-python3 workload.py all --arch <arch> --platform <platform> --bootargs "console=ttyAMA0 earlycon" --cross-compile /path/to/<target-triplet>-
+python3 workload.py all --platform <platform> \
+  --platform-option harts=4 \
+  --platform-option bootargs="console=ttyAMA0 earlycon" \
+  --cross-compile /path/to/<target-triplet>-
 ```
 
 指定并行编译任务数：
 
 ```sh
-python3 workload.py all --arch <arch> --platform <platform> --jobs 16 --cross-compile /path/to/<target-triplet>-
+python3 workload.py all --platform <platform> --jobs 16 --cross-compile /path/to/<target-triplet>-
 ```
 
 只看命令不真正执行：
 
 ```sh
-python3 workload.py all --arch <arch> --platform <platform> --cross-compile /path/to/<target-triplet>- --dry-run
+python3 workload.py all --platform <platform> --cross-compile /path/to/<target-triplet>- --dry-run
 ```
 
 ## 清理

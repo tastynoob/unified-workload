@@ -82,7 +82,6 @@ export AARCH64_CROSS=/path/to/aarch64-none-linux-gnu-
 
 ```sh
 python3 workload.py fetch linux \
-  --arch aarch64 \
   --platform qemu-minivirt-aarch64
 ```
 
@@ -99,7 +98,6 @@ ln -s /path/to/linux-6.10.3 external/aarch64/linux
 
 ```sh
 python3 workload.py doctor \
-  --arch aarch64 \
   --platform qemu-minivirt-aarch64 \
   --cross-compile "$AARCH64_CROSS"
 ```
@@ -108,7 +106,6 @@ python3 workload.py doctor \
 
 ```sh
 python3 workload.py print-plan \
-  --arch aarch64 \
   --platform qemu-minivirt-aarch64 \
   --cross-compile "$AARCH64_CROSS"
 ```
@@ -117,7 +114,6 @@ python3 workload.py print-plan \
 
 ```sh
 python3 workload.py all \
-  --arch aarch64 \
   --platform qemu-minivirt-aarch64 \
   --cross-compile "$AARCH64_CROSS"
 ```
@@ -125,10 +121,10 @@ python3 workload.py all \
 分步构建：
 
 ```sh
-python3 workload.py build-workload --arch aarch64 --platform qemu-minivirt-aarch64 --cross-compile "$AARCH64_CROSS"
-python3 workload.py build-dtb      --arch aarch64 --platform qemu-minivirt-aarch64
-python3 workload.py build-kernel   --arch aarch64 --platform qemu-minivirt-aarch64 --cross-compile "$AARCH64_CROSS"
-python3 workload.py build-firmware --arch aarch64 --platform qemu-minivirt-aarch64 --cross-compile "$AARCH64_CROSS"
+python3 workload.py build-workload --platform qemu-minivirt-aarch64 --cross-compile "$AARCH64_CROSS"
+python3 workload.py build-dtb      --platform qemu-minivirt-aarch64
+python3 workload.py build-kernel   --platform qemu-minivirt-aarch64 --cross-compile "$AARCH64_CROSS"
+python3 workload.py build-firmware --platform qemu-minivirt-aarch64 --cross-compile "$AARCH64_CROSS"
 ```
 
 ## 运行

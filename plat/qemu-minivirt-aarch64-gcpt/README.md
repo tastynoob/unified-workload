@@ -46,7 +46,6 @@ The AArch64 checkpoint source is fetched as a platform resource:
 
 ```sh
 python3 workload.py fetch libcheckpoint-for-aarch64 \
-  --arch aarch64 \
   --platform qemu-minivirt-aarch64-gcpt
 ```
 
@@ -66,7 +65,6 @@ build interface documented by the resource itself.
 export AARCH64_CROSS=/path/to/aarch64-none-linux-gnu-
 
 python3 workload.py all \
-  --arch aarch64 \
   --platform qemu-minivirt-aarch64-gcpt \
   --cross-compile "$AARCH64_CROSS"
 ```
@@ -74,10 +72,10 @@ python3 workload.py all \
 Equivalent split build:
 
 ```sh
-python3 workload.py build-workload --arch aarch64 --platform qemu-minivirt-aarch64-gcpt --cross-compile "$AARCH64_CROSS"
-python3 workload.py build-dtb      --arch aarch64 --platform qemu-minivirt-aarch64-gcpt
-python3 workload.py build-kernel   --arch aarch64 --platform qemu-minivirt-aarch64-gcpt --cross-compile "$AARCH64_CROSS"
-python3 workload.py build-gcpt     --arch aarch64 --platform qemu-minivirt-aarch64-gcpt --cross-compile "$AARCH64_CROSS"
+python3 workload.py build-workload --platform qemu-minivirt-aarch64-gcpt --cross-compile "$AARCH64_CROSS"
+python3 workload.py build-dtb      --platform qemu-minivirt-aarch64-gcpt
+python3 workload.py build-kernel   --platform qemu-minivirt-aarch64-gcpt --cross-compile "$AARCH64_CROSS"
+python3 workload.py build-gcpt     --platform qemu-minivirt-aarch64-gcpt --cross-compile "$AARCH64_CROSS"
 ```
 
 ## Run
